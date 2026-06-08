@@ -229,23 +229,3 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m AppModel) View() string {
-	if m.InputMode {
-		if m.inputStep == stepTitle {
-			return "New task: " + m.titleInput.View() + "\n"
-		}
-		s := "Due date (YYYY-MM-DD, Enter to skip): " + m.dateInput.View() + "\n"
-		if m.inputErr != "" {
-			s += m.inputErr + "\n"
-		}
-		return s
-	}
-	return "Hello, Todo\n"
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
