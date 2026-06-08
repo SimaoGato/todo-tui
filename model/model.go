@@ -67,13 +67,96 @@ func (m AppModel) Init() tea.Cmd {
 
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+
 	case todosLoadedMsg:
 		m.Tasks = msg.todos
 		m.Cursor = 0
+		return m, nil
+
+	case tea.KeyMsg:
+		// Ctrl+C always quits (3.6).
+		if msg.Type == tea.KeyCtrlC {
+			return m, tea.Quit
+		}
+
+		// While in input mode only Esc is handled (input flow is Epic 4).
+		if m.InputMode {
+			if msg.Type == tea.KeyEsc {
+				m.InputMode = false
+			}
+			return m, nil
+		}
+
+		switch msg.String() {
+
+		// 3.6 – quit
+		case "q":
+			return m, tea.Quit
+
+		// 3.2 – navigation
+		case "j":
+			if len(m.Tasks) > 0 {
+				m.Cursor = (m.Cursor + 1) % len(m.Tasks)
+			}
+
+		case "k":
+			if len(m.Tasks) > 0 {
+				m.Cursor = (m.Cursor - 1 + len(m.Tasks)) % len(m.Tasks)
+			}
+
+		// 3.3 – tab switching
+		case "1":
+			m.ActiveTab = TabToday
+			m.Cursor = 0
+			return m, m.loadTodos()
+
+		case "2":
+			m.ActiveTab = TabAll
+			m.Cursor = 0
+			return m, m.loadTodos()
+
+		case "3":
+			m.ActiveTab = TabCompleted
+			m.Cursor = 0
+			return m, m.loadTodos()
+
+		case "tab":
+			m.ActiveTab = (m.ActiveTab + 1) % 3
+			m.Cursor = 0
+			return m, m.loadTodos()
+
+		// 3.4 – toggle completion
+		case " ":
+			if len(m.Tasks) > 0 {
+				_ = m.Repo.ToggleDone(m.Tasks[m.Cursor].ID)
+				if m.Cursor >= len(m.Tasks)-1 {
+					m.Cursor = max(0, len(m.Tasks)-2)
+				}
+				return m, m.loadTodos()
+			}
+
+		// 3.5 – delete
+		case "d":
+			if len(m.Tasks) > 0 {
+				_ = m.Repo.Delete(m.Tasks[m.Cursor].ID)
+				if m.Cursor >= len(m.Tasks)-1 {
+					m.Cursor = max(0, len(m.Tasks)-2)
+				}
+				return m, m.loadTodos()
+			}
+		}
 	}
+
 	return m, nil
 }
 
 func (m AppModel) View() string {
 	return "Hello, Todo\n"
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
