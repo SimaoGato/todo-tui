@@ -5,35 +5,34 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/justasandbox/my-todo-cli/db"
+	"github.com/justasandbox/my-todo-cli/model"
 )
 
-type model struct{}
-
-func (m model) Init() tea.Cmd {
-	return nil
-}
-
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC:
-			return m, tea.Quit
-		}
-		switch msg.String() {
-		case "q":
-			return m, tea.Quit
-		}
+func dbPath() string {
+	if p := os.Getenv("TODO_DB_PATH"); p != "" {
+		return p
 	}
-	return m, nil
-}
-
-func (m model) View() string {
-	return "Hello, Todo\n"
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ".todo.db"
+	}
+	return home + "/.todo.db"
 }
 
 func main() {
-	p := tea.NewProgram(model{})
+	conn, err := db.Open(dbPath())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error opening database: %v\n", err)
+		os.Exit(1)
+	}
+	defer conn.Close()
+
+	repo := db.NewRepository(conn)
+	m := model.New(repo)
+
+	p := tea.NewProgram(m)
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
