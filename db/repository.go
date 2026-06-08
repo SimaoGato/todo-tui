@@ -8,12 +8,80 @@ import (
 	"github.com/justasandbox/my-todo-cli/model"
 )
 
+const (
+	queryAll = `
+		SELECT id, title, done, due_date, created_at, updated_at FROM todos
+		WHERE done = 0
+		ORDER BY CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date, created_at`
+
+	queryToday = `
+		SELECT id, title, done, due_date, created_at, updated_at FROM todos
+		WHERE done = 0 AND DATE(due_date) = DATE('now')
+		ORDER BY created_at`
+
+	queryDone = `
+		SELECT id, title, done, due_date, created_at, updated_at FROM todos
+		WHERE done = 1
+		ORDER BY updated_at DESC`
+)
+
 type Repository struct {
 	db *sql.DB
 }
 
 func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: db}
+}
+
+func (r *Repository) List(filter model.Filter) ([]model.Todo, error) {
+	var query string
+	switch filter {
+	case model.FilterToday:
+		query = queryToday
+	case model.FilterDone:
+		query = queryDone
+	default:
+		query = queryAll
+	}
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("list todos: %w", err)
+	}
+	defer rows.Close()
+
+	var todos []model.Todo
+	for rows.Next() {
+		var t model.Todo
+		var dueDateStr *string
+		var createdAtStr, updatedAtStr string
+
+		if err := rows.Scan(&t.ID, &t.Title, &t.Done, &dueDateStr, &createdAtStr, &updatedAtStr); err != nil {
+			return nil, fmt.Errorf("scan todo: %w", err)
+		}
+		if dueDateStr != nil {
+			var d time.Time
+			var parseErr error
+			for _, layout := range []string{"2006-01-02", time.RFC3339, "2006-01-02T15:04:05Z07:00"} {
+				d, parseErr = time.Parse(layout, *dueDateStr)
+				if parseErr == nil {
+					break
+				}
+			}
+			if parseErr != nil {
+				return nil, fmt.Errorf("parse due_date: %w", parseErr)
+			}
+			d = d.UTC().Truncate(24 * time.Hour)
+			t.DueDate = &d
+		}
+		t.CreatedAt, _ = time.Parse(time.RFC3339, createdAtStr)
+		t.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAtStr)
+		todos = append(todos, t)
+	}
+	if todos == nil {
+		todos = []model.Todo{}
+	}
+	return todos, rows.Err()
 }
 
 func (r *Repository) Create(title string, dueDate *time.Time) (model.Todo, error) {

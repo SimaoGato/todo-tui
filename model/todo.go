@@ -10,3 +10,11 @@ type Todo struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
+
+type Filter int
+
+const (
+	FilterAll Filter = iota
+	FilterToday
+	FilterDone
+)
