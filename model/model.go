@@ -1,8 +1,10 @@
 package model
 
 import (
+	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -23,23 +25,46 @@ const (
 	TabCompleted
 )
 
+type inputStep int
+
+const (
+	stepNone  inputStep = iota
+	stepTitle
+	stepDate
+)
+
 // todosLoadedMsg carries the result of an async List() call.
 type todosLoadedMsg struct {
 	todos []Todo
 }
 
 type AppModel struct {
-	Tasks     []Todo
-	Cursor    int
-	ActiveTab Tab
-	InputMode bool
-	Repo      Repo
+	Tasks        []Todo
+	Cursor       int
+	ActiveTab    Tab
+	InputMode    bool
+	inputStep    inputStep
+	titleInput   textinput.Model
+	dateInput    textinput.Model
+	pendingTitle string
+	inputErr     string
+	Repo         Repo
 }
 
 func New(repo Repo) AppModel {
+	ti := textinput.New()
+	ti.Placeholder = "Task title…"
+	ti.CharLimit = 256
+
+	di := textinput.New()
+	di.Placeholder = "YYYY-MM-DD"
+	di.CharLimit = 10
+
 	return AppModel{
-		ActiveTab: TabToday,
-		Repo:      repo,
+		ActiveTab:  TabToday,
+		Repo:       repo,
+		titleInput: ti,
+		dateInput:  di,
 	}
 }
 
@@ -79,15 +104,69 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
-		// While in input mode only Esc is handled (input flow is Epic 4).
 		if m.InputMode {
-			if msg.Type == tea.KeyEsc {
+			switch msg.Type {
+			case tea.KeyEsc:
 				m.InputMode = false
+				m.inputStep = stepNone
+				m.inputErr = ""
+				m.pendingTitle = ""
+				return m, nil
+
+			case tea.KeyEnter:
+				if m.inputStep == stepTitle {
+					title := strings.TrimSpace(m.titleInput.Value())
+					if title == "" {
+						return m, nil
+					}
+					m.pendingTitle = title
+					m.inputStep = stepDate
+					m.dateInput.Reset()
+					m.titleInput.Blur()
+					focusCmd := m.dateInput.Focus()
+					return m, focusCmd
+				}
+				// stepDate: validate and save
+				dateStr := strings.TrimSpace(m.dateInput.Value())
+				var dueDate *time.Time
+				if dateStr != "" {
+					t, err := time.Parse("2006-01-02", dateStr)
+					if err != nil {
+						m.inputErr = "invalid date, use YYYY-MM-DD"
+						return m, nil
+					}
+					dueDate = &t
+				}
+				if _, err := m.Repo.Create(m.pendingTitle, dueDate); err != nil {
+					return m, nil
+				}
+				m.InputMode = false
+				m.inputStep = stepNone
+				m.inputErr = ""
+				m.pendingTitle = ""
+				return m, m.loadTodos()
 			}
-			return m, nil
+
+			// Delegate remaining keys to the active input field.
+			var cmd tea.Cmd
+			if m.inputStep == stepTitle {
+				m.titleInput, cmd = m.titleInput.Update(msg)
+			} else {
+				m.dateInput, cmd = m.dateInput.Update(msg)
+			}
+			return m, cmd
 		}
 
 		switch msg.String() {
+
+		// 4.1 – enter add mode
+		case "a":
+			m.InputMode = true
+			m.inputStep = stepTitle
+			m.inputErr = ""
+			m.titleInput.Reset()
+			focusCmd := m.titleInput.Focus()
+			return m, focusCmd
 
 		// 3.6 – quit
 		case "q":
@@ -151,6 +230,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m AppModel) View() string {
+	if m.InputMode {
+		if m.inputStep == stepTitle {
+			return "New task: " + m.titleInput.View() + "\n"
+		}
+		s := "Due date (YYYY-MM-DD, Enter to skip): " + m.dateInput.View() + "\n"
+		if m.inputErr != "" {
+			s += m.inputErr + "\n"
+		}
+		return s
+	}
 	return "Hello, Todo\n"
 }
 
