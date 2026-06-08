@@ -84,6 +84,21 @@ func (r *Repository) List(filter model.Filter) ([]model.Todo, error) {
 	return todos, rows.Err()
 }
 
+func (r *Repository) Delete(id int) error {
+	res, err := r.db.Exec(`DELETE FROM todos WHERE id = ?`, id)
+	if err != nil {
+		return fmt.Errorf("delete todo: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("rows affected: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("todo %d not found", id)
+	}
+	return nil
+}
+
 func (r *Repository) ToggleDone(id int) error {
 	res, err := r.db.Exec(
 		`UPDATE todos SET done = NOT done, updated_at = ? WHERE id = ?`,
