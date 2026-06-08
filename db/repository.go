@@ -16,7 +16,7 @@ const (
 
 	queryToday = `
 		SELECT id, title, done, due_date, created_at, updated_at FROM todos
-		WHERE done = 0 AND DATE(due_date) = DATE('now')
+		WHERE done = 0 AND DATE(due_date) = DATE('now', 'localtime')
 		ORDER BY created_at`
 
 	queryDone = `
@@ -71,7 +71,7 @@ func (r *Repository) List(filter model.Filter) ([]model.Todo, error) {
 			if parseErr != nil {
 				return nil, fmt.Errorf("parse due_date: %w", parseErr)
 			}
-			d = d.UTC().Truncate(24 * time.Hour)
+			d = d.Truncate(24 * time.Hour)
 			t.DueDate = &d
 		}
 		t.CreatedAt, _ = time.Parse(time.RFC3339, createdAtStr)
@@ -82,6 +82,24 @@ func (r *Repository) List(filter model.Filter) ([]model.Todo, error) {
 		todos = []model.Todo{}
 	}
 	return todos, rows.Err()
+}
+
+func (r *Repository) ToggleDone(id int) error {
+	res, err := r.db.Exec(
+		`UPDATE todos SET done = NOT done, updated_at = ? WHERE id = ?`,
+		time.Now().UTC().Format(time.RFC3339), id,
+	)
+	if err != nil {
+		return fmt.Errorf("toggle done: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("rows affected: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("todo %d not found", id)
+	}
+	return nil
 }
 
 func (r *Repository) Create(title string, dueDate *time.Time) (model.Todo, error) {
