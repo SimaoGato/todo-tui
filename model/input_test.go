@@ -126,7 +126,15 @@ func TestInput_EmptyDateCreatesTaskWithNoDueDate(t *testing.T) {
 	m = sendKey(m, "a")
 	m = typeString(m, "Buy milk")
 	m = sendKeyType(m, tea.KeyEnter) // confirm title
-	m = sendKeyType(m, tea.KeyEnter) // skip date
+	// async: Enter on stepDate returns a cmdCreate
+	next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(AppModel)
+	if cmd == nil {
+		t.Fatal("Enter on date step should return a cmd")
+	}
+	// execute cmd (calls repo.Create) → delivers createDoneMsg
+	next, _ = m.Update(cmd())
+	m = next.(AppModel)
 	if !createCalled {
 		t.Fatal("Create should have been called")
 	}
@@ -154,7 +162,15 @@ func TestInput_ValidDateCreatesTaskWithDueDate(t *testing.T) {
 	m = typeString(m, "Task")
 	m = sendKeyType(m, tea.KeyEnter) // confirm title
 	m = typeString(m, "2026-12-25")
-	m = sendKeyType(m, tea.KeyEnter) // confirm date
+	// async: Enter on stepDate returns a cmdCreate
+	next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(AppModel)
+	if cmd == nil {
+		t.Fatal("Enter on date step should return a cmd")
+	}
+	// execute cmd (calls repo.Create) → delivers createDoneMsg
+	next, _ = m.Update(cmd())
+	m = next.(AppModel)
 	if !createCalled {
 		t.Fatal("Create should have been called")
 	}

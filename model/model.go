@@ -44,6 +44,19 @@ type todosLoadedMsg struct {
 	err    error
 }
 
+type toggleDoneMsg struct {
+	err          error
+	wasIncomplete bool
+}
+
+type deleteDoneMsg struct {
+	err error
+}
+
+type createDoneMsg struct {
+	err error
+}
+
 type AppModel struct {
 	Tasks         []todo.Todo
 	Cursor        int
@@ -113,6 +126,25 @@ func (m AppModel) loadTodos() tea.Cmd {
 	}
 }
 
+func cmdToggle(repo Repo, id int, wasIncomplete bool) tea.Cmd {
+	return func() tea.Msg {
+		return toggleDoneMsg{err: repo.ToggleDone(id), wasIncomplete: wasIncomplete}
+	}
+}
+
+func cmdDelete(repo Repo, id int) tea.Cmd {
+	return func() tea.Msg {
+		return deleteDoneMsg{err: repo.Delete(id)}
+	}
+}
+
+func cmdCreate(repo Repo, title string, dueDate *time.Time) tea.Cmd {
+	return func() tea.Msg {
+		_, err := repo.Create(title, dueDate)
+		return createDoneMsg{err: err}
+	}
+}
+
 func (m AppModel) Init() tea.Cmd {
 	return m.loadTodos()
 }
@@ -136,6 +168,35 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Cursor = msg.cursor
 		}
 		return m, nil
+
+	case toggleDoneMsg:
+		if msg.err != nil {
+			m.errorMsg = "toggle failed: " + msg.err.Error()
+			return m, nil
+		}
+		if msg.wasIncomplete {
+			m.SessCompleted++
+		}
+		return m, m.loadTodos()
+
+	case deleteDoneMsg:
+		if msg.err != nil {
+			m.errorMsg = "delete failed: " + msg.err.Error()
+			return m, nil
+		}
+		m.SessDeleted++
+		return m, m.loadTodos()
+
+	case createDoneMsg:
+		if msg.err != nil {
+			m.inputErr = "create failed: " + msg.err.Error()
+			return m, nil
+		}
+		m.InputMode = false
+		m.inputStep = stepNone
+		m.inputErr = ""
+		m.pendingTitle = ""
+		return m, m.loadTodos()
 
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
@@ -180,7 +241,7 @@ func (m AppModel) updateInputMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			focusCmd := m.dateInput.Focus()
 			return m, focusCmd
 		}
-		// stepDate: validate and save
+		// stepDate: validate and dispatch async create
 		dateStr := strings.TrimSpace(m.dateInput.Value())
 		var dueDate *time.Time
 		if dateStr != "" {
@@ -191,19 +252,7 @@ func (m AppModel) updateInputMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			dueDate = &t
 		}
-		if _, err := m.Repo.Create(m.pendingTitle, dueDate); err != nil {
-			m.errorMsg = "create failed: " + err.Error()
-			m.InputMode = false
-			m.inputStep = stepNone
-			m.inputErr = ""
-			m.pendingTitle = ""
-			return m, nil
-		}
-		m.InputMode = false
-		m.inputStep = stepNone
-		m.inputErr = ""
-		m.pendingTitle = ""
-		return m, m.loadTodos()
+		return m, cmdCreate(m.Repo, m.pendingTitle, dueDate)
 	}
 
 	// 6.7 – 't' fills today's date when the date field is empty
@@ -227,14 +276,9 @@ func (m AppModel) updateInputMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m AppModel) updateConfirmDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case msg.String() == "y":
-		if err := m.Repo.Delete(m.Tasks[m.Cursor].ID); err != nil {
-			m.errorMsg = "delete failed: " + err.Error()
-			m.ConfirmDelete = false
-			return m, nil
-		}
-		m.SessDeleted++
+		id := m.Tasks[m.Cursor].ID
 		m.ConfirmDelete = false
-		return m, m.loadTodos()
+		return m, cmdDelete(m.Repo, id)
 	case msg.String() == "n", msg.Type == tea.KeyEsc:
 		m.ConfirmDelete = false
 	}
@@ -290,15 +334,9 @@ func (m AppModel) updateNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case " ":
 		if len(m.Tasks) > 0 {
+			id := m.Tasks[m.Cursor].ID
 			wasIncomplete := !m.Tasks[m.Cursor].Done
-			if err := m.Repo.ToggleDone(m.Tasks[m.Cursor].ID); err != nil {
-				m.errorMsg = "toggle failed: " + err.Error()
-				return m, nil
-			}
-			if wasIncomplete {
-				m.SessCompleted++
-			}
-			return m, m.loadTodos()
+			return m, cmdToggle(m.Repo, id, wasIncomplete)
 		}
 
 	case "d":

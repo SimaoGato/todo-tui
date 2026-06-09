@@ -42,7 +42,11 @@ func TestConfirm_YConfirmsDelete(t *testing.T) {
 	m.Tasks = todos
 
 	m = sendKey(m, "d")
-	sendKey(m, "y")
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")})
+	if cmd == nil {
+		t.Fatal("y should return a cmd")
+	}
+	cmd()
 	if !deleted {
 		t.Error("y should confirm and call Delete")
 	}

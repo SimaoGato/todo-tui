@@ -115,7 +115,11 @@ func TestToggle_SpaceCallsToggleDone(t *testing.T) {
 	m := New(repo)
 	m.Tasks = todos
 
-	sendKey(m, " ")
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(" ")})
+	if cmd == nil {
+		t.Fatal("space should return a cmd")
+	}
+	cmd()
 	if !toggled {
 		t.Error("ToggleDone not called with correct ID")
 	}
@@ -140,7 +144,11 @@ func TestDelete_DCallsDelete(t *testing.T) {
 	m.Tasks = todos
 
 	m = sendKey(m, "d") // shows confirm prompt
-	sendKey(m, "y")     // confirms
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")})
+	if cmd == nil {
+		t.Fatal("y should return a cmd")
+	}
+	cmd()
 	if !deleted {
 		t.Error("Delete not called with correct ID")
 	}
