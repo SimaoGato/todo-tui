@@ -119,6 +119,30 @@ func renderEmptyState(tab Tab) string {
 	return styleHelp.Render(msgs[tab])
 }
 
+// viewportBounds returns the [start, end) index range of Tasks to render.
+// When Height==0, all tasks are returned (fallback for startup before WindowSizeMsg).
+func (m AppModel) viewportBounds() (start, end int) {
+	start = m.Offset
+	end = len(m.Tasks)
+	if m.Height > 0 {
+		visibleRows := m.Height - fixedRows
+		if visibleRows < 1 {
+			visibleRows = 1
+		}
+		if end > start+visibleRows {
+			end = start + visibleRows
+		}
+	}
+	// Guard against a stale offset (e.g. tasks shrunk since last clampViewport).
+	if start < 0 {
+		start = 0
+	}
+	if start > end {
+		start = 0
+	}
+	return
+}
+
 // titleColWidth returns the title column width based on terminal width.
 func (m AppModel) titleColWidth() int {
 	// prefix: "> [x] " = 6, suffix: "  YYYY-MM-DD" = 12, min title = 20
@@ -162,8 +186,9 @@ func (m AppModel) View() string {
 		sb.WriteString("\n")
 	} else {
 		now := time.Now()
-		for i, task := range m.Tasks {
-			sb.WriteString(renderTaskRow(task, i == m.Cursor, now, tw))
+		start, end := m.viewportBounds()
+		for i := start; i < end; i++ {
+			sb.WriteString(renderTaskRow(m.Tasks[i], i == m.Cursor, now, tw))
 			sb.WriteString("\n")
 		}
 	}
@@ -176,6 +201,7 @@ func (m AppModel) View() string {
 	} else {
 		sb.WriteString(renderHelpBar(false))
 	}
-	sb.WriteString("\n")
+	// No trailing \n: view occupies Height-1 newlines when full, preventing the alt-screen
+	// from scrolling the tab bar off the top of the terminal.
 	return sb.String()
 }

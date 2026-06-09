@@ -57,9 +57,14 @@ type createDoneMsg struct {
 	err error
 }
 
+// fixedRows is the number of non-task lines in the normal view:
+// tab bar + blank line + blank line before help + help bar.
+const fixedRows = 4
+
 type AppModel struct {
 	Tasks         []todo.Todo
 	Cursor        int
+	Offset        int
 	ActiveTab     Tab
 	InputMode     bool
 	inputStep     inputStep
@@ -105,6 +110,25 @@ func New(repo Repo) AppModel {
 		titleInput: ti,
 		dateInput:  di,
 	}
+}
+
+// clampViewport adjusts m.Offset so that m.Cursor is always within the visible window.
+// It is a no-op when Height==0 (no terminal size received yet) or when there are no tasks.
+func clampViewport(m AppModel) AppModel {
+	if m.Height == 0 || len(m.Tasks) == 0 {
+		return m
+	}
+	visibleRows := m.Height - fixedRows
+	if visibleRows < 1 {
+		visibleRows = 1
+	}
+	if m.Cursor < m.Offset {
+		m.Offset = m.Cursor
+	}
+	if m.Cursor >= m.Offset+visibleRows {
+		m.Offset = m.Cursor - visibleRows + 1
+	}
+	return m
 }
 
 func tabToFilter(tab Tab) todo.Filter {
@@ -167,6 +191,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 			m.Cursor = msg.cursor
 		}
+		m = clampViewport(m)
 		return m, nil
 
 	case toggleDoneMsg:
@@ -201,6 +226,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
 		m.Height = msg.Height
+		m = clampViewport(m)
 		return m, nil
 
 	case tea.KeyMsg:
@@ -315,21 +341,25 @@ func (m AppModel) updateNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "1":
 		m.ActiveTab = TabToday
 		m.Cursor = 0
+		m.Offset = 0
 		return m, m.loadTodos()
 
 	case "2":
 		m.ActiveTab = TabAll
 		m.Cursor = 0
+		m.Offset = 0
 		return m, m.loadTodos()
 
 	case "3":
 		m.ActiveTab = TabCompleted
 		m.Cursor = 0
+		m.Offset = 0
 		return m, m.loadTodos()
 
 	case "tab":
 		m.ActiveTab = (m.ActiveTab + 1) % tabCount
 		m.Cursor = 0
+		m.Offset = 0
 		return m, m.loadTodos()
 
 	case " ":
@@ -357,13 +387,16 @@ func (m AppModel) updateNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "right":
 		m.ActiveTab = (m.ActiveTab + 1) % tabCount
 		m.Cursor = 0
+		m.Offset = 0
 		return m, m.loadTodos()
 
 	case "left":
 		m.ActiveTab = (m.ActiveTab + 2) % tabCount
 		m.Cursor = 0
+		m.Offset = 0
 		return m, m.loadTodos()
 	}
 
+	m = clampViewport(m)
 	return m, nil
 }
