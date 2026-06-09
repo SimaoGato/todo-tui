@@ -834,3 +834,35 @@ h4. Operational Risks
 h4. Out of Scope
 * End-to-end or integration tests that launch the full TUI
 * Performance benchmarks
+
+---
+
+h3. 6.11 Session Summary on Exit
+
+*Estimation:* 3h
+
+h4. User Story
+As a user I want to see a summary in the terminal after closing the app so I know what I accomplished and what still needs attention today.
+
+h4. Acceptance Criteria
+* AC1: After quitting (@q@ or @Ctrl+C@), the alt-screen is dismissed and a summary is printed to the terminal
+* AC2: Summary shows the number of tasks completed this session (toggled to done)
+* AC3: Summary shows the number of tasks deleted this session
+* AC4: Summary shows the count of remaining incomplete tasks due today
+* AC5: If nothing happened (0 completed, 0 deleted, 0 today), a minimal "Nothing to report" line is shown instead
+* AC6: Output is plain text, readable without colour support
+
+h4. Implementation Details
+* Add @SessCompleted int@ and @SessDeleted int@ counters to @AppModel@
+* Increment @SessCompleted@ in @Update()@ when @ToggleDone@ is called on a task whose @Done == false@
+* Increment @SessDeleted@ in @Update()@ when a delete is confirmed (@"y"@ in confirm mode)
+* After @p.Run()@ returns in @main.go@, call @repo.List(FilterToday)@ to get remaining today tasks
+* Print the summary to @os.Stdout@ using @fmt.Fprintf@; no extra dependencies needed
+* Expose a @Summary@ struct from the model package (or return counters via a method) so @main.go@ can read them
+
+h4. Operational Risks
+* @ToggleDone@ can toggle a task back to incomplete; @SessCompleted@ should only count net completions (transitions from @done=false@ to @done=true@)
+
+h4. Out of Scope
+* Persisting session history across runs
+* Showing which specific tasks were completed or deleted
