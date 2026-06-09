@@ -24,8 +24,8 @@ func TestNew_Defaults(t *testing.T) {
 }
 
 func TestInit_ReturnsCmdThatLoadsTodos(t *testing.T) {
-	todos := []todo.Todo{{ID: 1, Title: "test todo"}}
-	repo := &testRepo{OnList: func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil }}
+	todos := []todo.Task{{ID: 1, Title: "test todo"}}
+	repo := &testRepo{OnList: func(_ todo.Filter) ([]todo.Task, error) { return todos, nil }}
 	m := New(repo)
 
 	cmd := m.Init()
@@ -38,16 +38,16 @@ func TestInit_ReturnsCmdThatLoadsTodos(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected todosLoadedMsg, got %T", msg)
 	}
-	if len(loaded.todos) != 1 || loaded.todos[0].Title != "test todo" {
-		t.Errorf("unexpected todos: %v", loaded.todos)
+	if len(loaded.tasks) != 1 || loaded.tasks[0].Title != "test todo" {
+		t.Errorf("unexpected tasks: %v", loaded.tasks)
 	}
 }
 
 func TestUpdate_TodosLoadedMsg_PopulatesTasks(t *testing.T) {
 	m := New(&testRepo{})
 
-	todos := []todo.Todo{{ID: 1, Title: "a"}, {ID: 2, Title: "b"}}
-	next, _ := m.Update(todosLoadedMsg{todos: todos})
+	todos := []todo.Task{{ID: 1, Title: "a"}, {ID: 2, Title: "b"}}
+	next, _ := m.Update(todosLoadedMsg{tasks: todos})
 
 	am := next.(AppModel)
 	if len(am.Tasks) != 2 {
@@ -76,7 +76,7 @@ func TestTabToFilter(t *testing.T) {
 
 func TestInit_UsesTodayFilterByDefault(t *testing.T) {
 	var calledWith todo.Filter
-	repo := &testRepo{OnList: func(f todo.Filter) ([]todo.Todo, error) {
+	repo := &testRepo{OnList: func(f todo.Filter) ([]todo.Task, error) {
 		calledWith = f
 		return nil, nil
 	}}

@@ -33,9 +33,9 @@ func doToggle(m AppModel) AppModel {
 
 // AC2: SessCompleted increments when toggling a task from done=false to done=true.
 func TestSessionSummary_CompletedIncrements(t *testing.T) {
-	tasks := []todo.Todo{{ID: 1, Title: "task", Done: false}}
+	tasks := []todo.Task{{ID: 1, Title: "task", Done: false}}
 	repo := &testRepo{
-		OnList:       func(_ todo.Filter) ([]todo.Todo, error) { return tasks, nil },
+		OnList:       func(_ todo.Filter) ([]todo.Task, error) { return tasks, nil },
 		OnToggleDone: func(_ int) error { return nil },
 	}
 	m := New(repo)
@@ -50,9 +50,9 @@ func TestSessionSummary_CompletedIncrements(t *testing.T) {
 
 // AC2 (edge): SessCompleted must NOT increment when toggling a task from done=true back to false.
 func TestSessionSummary_CompletedNotIncrementedForUndo(t *testing.T) {
-	tasks := []todo.Todo{{ID: 1, Title: "task", Done: true}}
+	tasks := []todo.Task{{ID: 1, Title: "task", Done: true}}
 	repo := &testRepo{
-		OnList:       func(_ todo.Filter) ([]todo.Todo, error) { return tasks, nil },
+		OnList:       func(_ todo.Filter) ([]todo.Task, error) { return tasks, nil },
 		OnToggleDone: func(_ int) error { return nil },
 	}
 	m := New(repo)
@@ -67,9 +67,9 @@ func TestSessionSummary_CompletedNotIncrementedForUndo(t *testing.T) {
 
 // AC3: SessDeleted increments after a confirmed delete.
 func TestSessionSummary_DeletedIncrements(t *testing.T) {
-	tasks := []todo.Todo{{ID: 1, Title: "task"}}
+	tasks := []todo.Task{{ID: 1, Title: "task"}}
 	repo := &testRepo{
-		OnList:   func(_ todo.Filter) ([]todo.Todo, error) { return tasks, nil },
+		OnList:   func(_ todo.Filter) ([]todo.Task, error) { return tasks, nil },
 		OnDelete: func(_ int) error { return nil },
 	}
 	m := New(repo)
@@ -84,9 +84,9 @@ func TestSessionSummary_DeletedIncrements(t *testing.T) {
 
 // AC3 (edge): SessDeleted must NOT increment when delete is cancelled (n).
 func TestSessionSummary_DeletedNotIncrementedOnCancel(t *testing.T) {
-	tasks := []todo.Todo{{ID: 1, Title: "task"}}
+	tasks := []todo.Task{{ID: 1, Title: "task"}}
 	repo := &testRepo{
-		OnList:   func(_ todo.Filter) ([]todo.Todo, error) { return tasks, nil },
+		OnList:   func(_ todo.Filter) ([]todo.Task, error) { return tasks, nil },
 		OnDelete: func(_ int) error { return nil },
 	}
 	m := New(repo)
@@ -102,12 +102,12 @@ func TestSessionSummary_DeletedNotIncrementedOnCancel(t *testing.T) {
 
 // Counters accumulate across multiple operations.
 func TestSessionSummary_AccumulatesAcrossOperations(t *testing.T) {
-	tasks := []todo.Todo{
+	tasks := []todo.Task{
 		{ID: 1, Title: "a", Done: false},
 		{ID: 2, Title: "b", Done: false},
 	}
 	repo := &testRepo{
-		OnList:       func(_ todo.Filter) ([]todo.Todo, error) { return tasks, nil },
+		OnList:       func(_ todo.Filter) ([]todo.Task, error) { return tasks, nil },
 		OnToggleDone: func(_ int) error { return nil },
 		OnDelete:     func(_ int) error { return nil },
 	}

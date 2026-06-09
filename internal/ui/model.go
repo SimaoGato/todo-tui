@@ -13,8 +13,8 @@ import (
 // Repo is the data access interface the TUI model depends on.
 // db.Repository satisfies it implicitly.
 type Repo interface {
-	List(filter todo.Filter) ([]todo.Todo, error)
-	Create(title string, dueDate *time.Time) (todo.Todo, error)
+	List(filter todo.Filter) ([]todo.Task, error)
+	Create(title string, dueDate *time.Time) (todo.Task, error)
 	ToggleDone(id int) error
 	Delete(id int) error
 }
@@ -39,7 +39,7 @@ const (
 // todosLoadedMsg carries the result of an async List() call.
 // cursor is the desired cursor position after the load (will be clamped).
 type todosLoadedMsg struct {
-	todos  []todo.Todo
+	tasks  []todo.Task
 	cursor int
 	err    error
 }
@@ -62,7 +62,7 @@ type createDoneMsg struct {
 const fixedRows = 4
 
 type AppModel struct {
-	Tasks         []todo.Todo
+	Tasks         []todo.Task
 	Cursor        int
 	Offset        int
 	ActiveTab     Tab
@@ -145,8 +145,8 @@ func tabToFilter(tab Tab) todo.Filter {
 func (m AppModel) loadTodos() tea.Cmd {
 	cursor := m.Cursor
 	return func() tea.Msg {
-		todos, err := m.Repo.List(tabToFilter(m.ActiveTab))
-		return todosLoadedMsg{todos: todos, cursor: cursor, err: err}
+		tasks, err := m.Repo.List(tabToFilter(m.ActiveTab))
+		return todosLoadedMsg{tasks: tasks, cursor: cursor, err: err}
 	}
 }
 
@@ -182,7 +182,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.errorMsg = ""
-		m.Tasks = msg.todos
+		m.Tasks = msg.tasks
 		switch {
 		case len(m.Tasks) == 0:
 			m.Cursor = 0

@@ -33,7 +33,7 @@ func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) List(filter todo.Filter) ([]todo.Todo, error) {
+func (r *Repository) List(filter todo.Filter) ([]todo.Task, error) {
 	var query string
 	switch filter {
 	case todo.FilterToday:
@@ -50,9 +50,9 @@ func (r *Repository) List(filter todo.Filter) ([]todo.Todo, error) {
 	}
 	defer rows.Close()
 
-	var todos []todo.Todo
+	var todos []todo.Task
 	for rows.Next() {
-		var t todo.Todo
+		var t todo.Task
 		var dueDateStr *string
 		var createdAtStr, updatedAtStr string
 
@@ -87,7 +87,7 @@ func (r *Repository) List(filter todo.Filter) ([]todo.Todo, error) {
 		todos = append(todos, t)
 	}
 	if todos == nil {
-		todos = []todo.Todo{}
+		todos = []todo.Task{}
 	}
 	return todos, rows.Err()
 }
@@ -125,7 +125,7 @@ func (r *Repository) ToggleDone(id int) error {
 	return nil
 }
 
-func (r *Repository) Create(title string, dueDate *time.Time) (todo.Todo, error) {
+func (r *Repository) Create(title string, dueDate *time.Time) (todo.Task, error) {
 	now := time.Now().UTC()
 
 	var dueDateStr *string
@@ -140,15 +140,15 @@ func (r *Repository) Create(title string, dueDate *time.Time) (todo.Todo, error)
 		title, dueDateStr, now.Format(time.RFC3339), now.Format(time.RFC3339),
 	)
 	if err != nil {
-		return todo.Todo{}, fmt.Errorf("create todo: %w", err)
+		return todo.Task{}, fmt.Errorf("create todo: %w", err)
 	}
 
 	id, err := res.LastInsertId()
 	if err != nil {
-		return todo.Todo{}, fmt.Errorf("last insert id: %w", err)
+		return todo.Task{}, fmt.Errorf("last insert id: %w", err)
 	}
 
-	return todo.Todo{
+	return todo.Task{
 		ID:        int(id),
 		Title:     title,
 		Done:      false,

@@ -2,7 +2,7 @@ package todo
 
 import "time"
 
-type Todo struct {
+type Task struct {
 	ID        int
 	Title     string
 	Done      bool

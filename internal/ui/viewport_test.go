@@ -153,11 +153,11 @@ func TestViewport_ViewCapsRenderedRows(t *testing.T) {
 func TestViewport_ViewShowsCorrectWindow(t *testing.T) {
 	// 10 tasks with distinct titles; navigate to cursor=7 so offset=2.
 	// View should contain tasks 2..7, not task 0 or task 9.
-	todos := make([]todo.Todo, 10)
+	todos := make([]todo.Task, 10)
 	for i := range todos {
-		todos[i] = todo.Todo{ID: i + 1, Title: fmt.Sprintf("task%d", i)}
+		todos[i] = todo.Task{ID: i + 1, Title: fmt.Sprintf("task%d", i)}
 	}
-	repo := &testRepo{OnList: func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil }}
+	repo := &testRepo{OnList: func(_ todo.Filter) ([]todo.Task, error) { return todos, nil }}
 	m := New(repo)
 	m.Tasks = todos
 	m.Height = 10 // visibleRows=6

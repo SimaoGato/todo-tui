@@ -75,7 +75,7 @@ func taskDateClass(dueDate *time.Time, now time.Time) string {
 
 // 5.2 + 5.3 – task row with color coding
 
-func renderTaskRow(task todo.Todo, isCursor bool, now time.Time, titleWidth int) string {
+func renderTaskRow(task todo.Task, isCursor bool, now time.Time, titleWidth int) string {
 	cursor := "  "
 	if isCursor {
 		cursor = "> "

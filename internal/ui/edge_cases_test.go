@@ -34,7 +34,7 @@ func TestCursorPersistence_LoadPreservesPosition(t *testing.T) {
 	m := modelWithTasks(3)
 	m.Cursor = 1
 	next, _ := m.Update(todosLoadedMsg{
-		todos:  []todo.Todo{{ID: 1}, {ID: 2}, {ID: 3}},
+		tasks:  []todo.Task{{ID: 1}, {ID: 2}, {ID: 3}},
 		cursor: 1,
 	})
 	am := next.(AppModel)
@@ -48,7 +48,7 @@ func TestCursorPersistence_ClampedWhenListShrinks(t *testing.T) {
 	m.Cursor = 2
 	// List shrinks to 1 item (e.g. after toggle removes task from view).
 	next, _ := m.Update(todosLoadedMsg{
-		todos:  []todo.Todo{{ID: 1}},
+		tasks:  []todo.Task{{ID: 1}},
 		cursor: 2,
 	})
 	am := next.(AppModel)
@@ -61,7 +61,7 @@ func TestCursorPersistence_EmptyListAfterMutation(t *testing.T) {
 	m := modelWithTasks(1)
 	m.Cursor = 0
 	next, _ := m.Update(todosLoadedMsg{
-		todos:  []todo.Todo{},
+		tasks:  []todo.Task{},
 		cursor: 0,
 	})
 	am := next.(AppModel)

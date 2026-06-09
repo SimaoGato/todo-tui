@@ -9,7 +9,7 @@ import (
 
 // seed inserts a todo directly into the DB, optionally marking it done, with a
 // controllable created_at so ordering tests are deterministic.
-func seed(t *testing.T, repo *Repository, title string, dueDate *time.Time, done bool, createdAt time.Time) todo.Todo {
+func seed(t *testing.T, repo *Repository, title string, dueDate *time.Time, done bool, createdAt time.Time) todo.Task {
 	t.Helper()
 	task, err := repo.Create(title, dueDate)
 	if err != nil {

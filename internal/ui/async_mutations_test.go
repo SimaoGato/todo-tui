@@ -14,7 +14,7 @@ import (
 
 func TestAsyncToggle_SpaceDoesNotCallRepoSynchronously(t *testing.T) {
 	called := false
-	todos := []todo.Todo{{ID: 1, Title: "task"}}
+	todos := []todo.Task{{ID: 1, Title: "task"}}
 	repo := &testRepo{OnToggleDone: func(_ int) error { called = true; return nil }}
 	m := New(repo)
 	m.Tasks = todos
@@ -33,8 +33,8 @@ func TestAsyncToggle_SpaceDoesNotCallRepoSynchronously(t *testing.T) {
 }
 
 func TestAsyncToggle_SuccessMsgIncrementsCompletedAndReloads(t *testing.T) {
-	m := New(&testRepo{OnList: func(_ todo.Filter) ([]todo.Todo, error) { return nil, nil }})
-	m.Tasks = []todo.Todo{{ID: 1}}
+	m := New(&testRepo{OnList: func(_ todo.Filter) ([]todo.Task, error) { return nil, nil }})
+	m.Tasks = []todo.Task{{ID: 1}}
 
 	next, cmd := m.Update(toggleDoneMsg{wasIncomplete: true, err: nil})
 	m = next.(AppModel)
@@ -47,7 +47,7 @@ func TestAsyncToggle_SuccessMsgIncrementsCompletedAndReloads(t *testing.T) {
 }
 
 func TestAsyncToggle_SuccessMsgNoIncrementWhenAlreadyDone(t *testing.T) {
-	m := New(&testRepo{OnList: func(_ todo.Filter) ([]todo.Todo, error) { return nil, nil }})
+	m := New(&testRepo{OnList: func(_ todo.Filter) ([]todo.Task, error) { return nil, nil }})
 
 	next, _ := m.Update(toggleDoneMsg{wasIncomplete: false, err: nil})
 	m = next.(AppModel)
@@ -60,7 +60,7 @@ func TestAsyncToggle_SuccessMsgNoIncrementWhenAlreadyDone(t *testing.T) {
 
 func TestAsyncToggle_ErrorMsgSetsErrorMsg(t *testing.T) {
 	m := New(&testRepo{})
-	m.Tasks = []todo.Todo{{ID: 1}}
+	m.Tasks = []todo.Task{{ID: 1}}
 
 	next, cmd := m.Update(toggleDoneMsg{err: errors.New("disk full")})
 	m = next.(AppModel)
@@ -76,7 +76,7 @@ func TestAsyncToggle_ErrorMsgSetsErrorMsg(t *testing.T) {
 
 func TestAsyncDelete_YDoesNotCallRepoSynchronously(t *testing.T) {
 	called := false
-	todos := []todo.Todo{{ID: 1, Title: "task"}}
+	todos := []todo.Task{{ID: 1, Title: "task"}}
 	repo := &testRepo{OnDelete: func(_ int) error { called = true; return nil }}
 	m := New(repo)
 	m.Tasks = todos
@@ -96,7 +96,7 @@ func TestAsyncDelete_YDoesNotCallRepoSynchronously(t *testing.T) {
 }
 
 func TestAsyncDelete_SuccessMsgIncrementsDeletedAndReloads(t *testing.T) {
-	m := New(&testRepo{OnList: func(_ todo.Filter) ([]todo.Todo, error) { return nil, nil }})
+	m := New(&testRepo{OnList: func(_ todo.Filter) ([]todo.Task, error) { return nil, nil }})
 
 	next, cmd := m.Update(deleteDoneMsg{err: nil})
 	m = next.(AppModel)
@@ -128,9 +128,9 @@ func TestAsyncDelete_ErrorMsgSetsErrorMsg(t *testing.T) {
 func TestAsyncCreate_EnterOnDateStepDoesNotCallRepoSynchronously(t *testing.T) {
 	called := false
 	repo := &testRepo{
-		OnCreate: func(_ string, _ *time.Time) (todo.Todo, error) {
+		OnCreate: func(_ string, _ *time.Time) (todo.Task, error) {
 			called = true
-			return todo.Todo{}, nil
+			return todo.Task{}, nil
 		},
 	}
 	m := New(repo)
@@ -154,7 +154,7 @@ func TestAsyncCreate_EnterOnDateStepDoesNotCallRepoSynchronously(t *testing.T) {
 // AC7 — success path: exits input mode and triggers reload.
 
 func TestAsyncCreate_SuccessMsgExitsInputMode(t *testing.T) {
-	m := New(&testRepo{OnList: func(_ todo.Filter) ([]todo.Todo, error) { return nil, nil }})
+	m := New(&testRepo{OnList: func(_ todo.Filter) ([]todo.Task, error) { return nil, nil }})
 	m.InputMode = true
 	m.inputStep = stepDate
 	m.pendingTitle = "Task"

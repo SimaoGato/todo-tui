@@ -14,9 +14,9 @@ import (
 
 func TestConfirm_DSetsFlagButDoesNotDelete(t *testing.T) {
 	deleted := false
-	todos := []todo.Todo{{ID: 1, Title: "task"}}
+	todos := []todo.Task{{ID: 1, Title: "task"}}
 	repo := &testRepo{
-		OnList:   func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil },
+		OnList:   func(_ todo.Filter) ([]todo.Task, error) { return todos, nil },
 		OnDelete: func(_ int) error { deleted = true; return nil },
 	}
 	m := New(repo)
@@ -33,9 +33,9 @@ func TestConfirm_DSetsFlagButDoesNotDelete(t *testing.T) {
 
 func TestConfirm_YConfirmsDelete(t *testing.T) {
 	deleted := false
-	todos := []todo.Todo{{ID: 5, Title: "bye"}}
+	todos := []todo.Task{{ID: 5, Title: "bye"}}
 	repo := &testRepo{
-		OnList:   func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil },
+		OnList:   func(_ todo.Filter) ([]todo.Task, error) { return todos, nil },
 		OnDelete: func(id int) error { deleted = (id == 5); return nil },
 	}
 	m := New(repo)
@@ -54,9 +54,9 @@ func TestConfirm_YConfirmsDelete(t *testing.T) {
 
 func TestConfirm_NCancels(t *testing.T) {
 	deleted := false
-	todos := []todo.Todo{{ID: 3, Title: "keep"}}
+	todos := []todo.Task{{ID: 3, Title: "keep"}}
 	repo := &testRepo{
-		OnList:   func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil },
+		OnList:   func(_ todo.Filter) ([]todo.Task, error) { return todos, nil },
 		OnDelete: func(_ int) error { deleted = true; return nil },
 	}
 	m := New(repo)
@@ -74,9 +74,9 @@ func TestConfirm_NCancels(t *testing.T) {
 
 func TestConfirm_EscCancels(t *testing.T) {
 	deleted := false
-	todos := []todo.Todo{{ID: 2, Title: "keep"}}
+	todos := []todo.Task{{ID: 2, Title: "keep"}}
 	repo := &testRepo{
-		OnList:   func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil },
+		OnList:   func(_ todo.Filter) ([]todo.Task, error) { return todos, nil },
 		OnDelete: func(_ int) error { deleted = true; return nil },
 	}
 	m := New(repo)
@@ -94,9 +94,9 @@ func TestConfirm_EscCancels(t *testing.T) {
 
 func TestConfirm_OtherKeysIgnored(t *testing.T) {
 	deleted := false
-	todos := []todo.Todo{{ID: 1, Title: "t"}}
+	todos := []todo.Task{{ID: 1, Title: "t"}}
 	repo := &testRepo{
-		OnList:   func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil },
+		OnList:   func(_ todo.Filter) ([]todo.Task, error) { return todos, nil },
 		OnDelete: func(_ int) error { deleted = true; return nil },
 	}
 	m := New(repo)

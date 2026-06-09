@@ -9,24 +9,24 @@ import (
 )
 
 type testRepo struct {
-	OnList       func(todo.Filter) ([]todo.Todo, error)
-	OnCreate     func(string, *time.Time) (todo.Todo, error)
+	OnList       func(todo.Filter) ([]todo.Task, error)
+	OnCreate     func(string, *time.Time) (todo.Task, error)
 	OnToggleDone func(int) error
 	OnDelete     func(int) error
 }
 
-func (r *testRepo) List(f todo.Filter) ([]todo.Todo, error) {
+func (r *testRepo) List(f todo.Filter) ([]todo.Task, error) {
 	if r.OnList != nil {
 		return r.OnList(f)
 	}
 	return nil, nil
 }
 
-func (r *testRepo) Create(title string, d *time.Time) (todo.Todo, error) {
+func (r *testRepo) Create(title string, d *time.Time) (todo.Task, error) {
 	if r.OnCreate != nil {
 		return r.OnCreate(title, d)
 	}
-	return todo.Todo{}, nil
+	return todo.Task{}, nil
 }
 
 func (r *testRepo) ToggleDone(id int) error {
@@ -44,11 +44,11 @@ func (r *testRepo) Delete(id int) error {
 }
 
 func modelWithTasks(n int) AppModel {
-	todos := make([]todo.Todo, n)
+	todos := make([]todo.Task, n)
 	for i := range todos {
-		todos[i] = todo.Todo{ID: i + 1, Title: "task"}
+		todos[i] = todo.Task{ID: i + 1, Title: "task"}
 	}
-	repo := &testRepo{OnList: func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil }}
+	repo := &testRepo{OnList: func(_ todo.Filter) ([]todo.Task, error) { return todos, nil }}
 	m := New(repo)
 	m.Tasks = todos
 	return m
