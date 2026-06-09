@@ -4,27 +4,29 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/justasandbox/my-todo-cli/todo"
 )
 
 type testRepo struct {
-	OnList       func(Filter) ([]Todo, error)
-	OnCreate     func(string, *time.Time) (Todo, error)
+	OnList       func(todo.Filter) ([]todo.Todo, error)
+	OnCreate     func(string, *time.Time) (todo.Todo, error)
 	OnToggleDone func(int) error
 	OnDelete     func(int) error
 }
 
-func (r *testRepo) List(f Filter) ([]Todo, error) {
+func (r *testRepo) List(f todo.Filter) ([]todo.Todo, error) {
 	if r.OnList != nil {
 		return r.OnList(f)
 	}
 	return nil, nil
 }
 
-func (r *testRepo) Create(title string, d *time.Time) (Todo, error) {
+func (r *testRepo) Create(title string, d *time.Time) (todo.Todo, error) {
 	if r.OnCreate != nil {
 		return r.OnCreate(title, d)
 	}
-	return Todo{}, nil
+	return todo.Todo{}, nil
 }
 
 func (r *testRepo) ToggleDone(id int) error {
@@ -42,11 +44,11 @@ func (r *testRepo) Delete(id int) error {
 }
 
 func modelWithTasks(n int) AppModel {
-	todos := make([]Todo, n)
+	todos := make([]todo.Todo, n)
 	for i := range todos {
-		todos[i] = Todo{ID: i + 1, Title: "task"}
+		todos[i] = todo.Todo{ID: i + 1, Title: "task"}
 	}
-	repo := &testRepo{OnList: func(_ Filter) ([]Todo, error) { return todos, nil }}
+	repo := &testRepo{OnList: func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil }}
 	m := New(repo)
 	m.Tasks = todos
 	return m

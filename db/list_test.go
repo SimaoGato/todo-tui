@@ -4,34 +4,34 @@ import (
 	"testing"
 	"time"
 
-	"github.com/justasandbox/my-todo-cli/model"
+	"github.com/justasandbox/my-todo-cli/todo"
 )
 
 // seed inserts a todo directly into the DB, optionally marking it done, with a
 // controllable created_at so ordering tests are deterministic.
-func seed(t *testing.T, repo *Repository, title string, dueDate *time.Time, done bool, createdAt time.Time) model.Todo {
+func seed(t *testing.T, repo *Repository, title string, dueDate *time.Time, done bool, createdAt time.Time) todo.Todo {
 	t.Helper()
-	todo, err := repo.Create(title, dueDate)
+	task, err := repo.Create(title, dueDate)
 	if err != nil {
 		t.Fatalf("seed Create(%q): %v", title, err)
 	}
 	// Overwrite timestamps and done flag for ordering/filtering control.
 	_, err = repo.db.Exec(
 		`UPDATE todos SET done=?, created_at=?, updated_at=? WHERE id=?`,
-		done, createdAt.UTC().Format(time.RFC3339), createdAt.UTC().Format(time.RFC3339), todo.ID,
+		done, createdAt.UTC().Format(time.RFC3339), createdAt.UTC().Format(time.RFC3339), task.ID,
 	)
 	if err != nil {
 		t.Fatalf("seed update(%q): %v", title, err)
 	}
-	todo.Done = done
-	todo.CreatedAt = createdAt
-	todo.UpdatedAt = createdAt
-	return todo
+	task.Done = done
+	task.CreatedAt = createdAt
+	task.UpdatedAt = createdAt
+	return task
 }
 
 func TestList_EmptyReturnsSlice(t *testing.T) {
 	repo := openTestDB(t)
-	for _, f := range []model.Filter{model.FilterAll, model.FilterToday, model.FilterDone} {
+	for _, f := range []todo.Filter{todo.FilterAll, todo.FilterToday, todo.FilterDone} {
 		todos, err := repo.List(f)
 		if err != nil {
 			t.Fatalf("List(%v): %v", f, err)
@@ -52,7 +52,7 @@ func TestList_AllExcludesDone(t *testing.T) {
 	seed(t, repo, "active", nil, false, base)
 	seed(t, repo, "completed", nil, true, base.Add(time.Second))
 
-	todos, err := repo.List(model.FilterAll)
+	todos, err := repo.List(todo.FilterAll)
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -72,7 +72,7 @@ func TestList_AllOrderNullsLast(t *testing.T) {
 	seed(t, repo, "no-date", nil, false, base)
 	seed(t, repo, "has-date", &future, false, base.Add(time.Second))
 
-	todos, err := repo.List(model.FilterAll)
+	todos, err := repo.List(todo.FilterAll)
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestList_TodayFilter(t *testing.T) {
 	seed(t, repo, "tomorrow-task", &tomorrow, false, base.Add(time.Second))
 	seed(t, repo, "no-date-task", nil, false, base.Add(2*time.Second))
 
-	todos, err := repo.List(model.FilterToday)
+	todos, err := repo.List(todo.FilterToday)
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
@@ -118,7 +118,7 @@ func TestList_DoneFilter(t *testing.T) {
 	seed(t, repo, "done-second", nil, true, base.Add(time.Second))
 	seed(t, repo, "active", nil, false, base)
 
-	todos, err := repo.List(model.FilterDone)
+	todos, err := repo.List(todo.FilterDone)
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}

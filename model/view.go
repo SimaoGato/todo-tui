@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/justasandbox/my-todo-cli/todo"
 )
 
 const defaultTitleWidth = 40
@@ -55,27 +57,27 @@ func renderTabBar(active Tab) string {
 
 // 5.2 + 5.3 – task row with color coding
 
-func renderTaskRow(todo Todo, isCursor bool, now time.Time, titleWidth int) string {
+func renderTaskRow(task todo.Todo, isCursor bool, now time.Time, titleWidth int) string {
 	cursor := "  "
 	if isCursor {
 		cursor = "> "
 	}
 	check := "[ ]"
-	if todo.Done {
+	if task.Done {
 		check = "[x]"
 	}
 	dueStr := "—"
-	if todo.DueDate != nil {
-		dueStr = todo.DueDate.Format("2006-01-02")
+	if task.DueDate != nil {
+		dueStr = task.DueDate.Format("2006-01-02")
 	}
-	title := fmt.Sprintf("%-*s", titleWidth, truncate(todo.Title, titleWidth))
+	title := fmt.Sprintf("%-*s", titleWidth, truncate(task.Title, titleWidth))
 	line := cursor + check + " " + title + "  " + dueStr
 
-	if todo.Done {
+	if task.Done {
 		return styleDone.Render(line)
 	}
-	if todo.DueDate != nil {
-		due := todo.DueDate.In(now.Location()).Truncate(24 * time.Hour)
+	if task.DueDate != nil {
+		due := task.DueDate.In(now.Location()).Truncate(24 * time.Hour)
 		today := now.Truncate(24 * time.Hour)
 		if due.Before(today) {
 			return styleOverdue.Render(line)

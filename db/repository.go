@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/justasandbox/my-todo-cli/model"
+	"github.com/justasandbox/my-todo-cli/todo"
 )
 
 const (
@@ -33,12 +33,12 @@ func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) List(filter model.Filter) ([]model.Todo, error) {
+func (r *Repository) List(filter todo.Filter) ([]todo.Todo, error) {
 	var query string
 	switch filter {
-	case model.FilterToday:
+	case todo.FilterToday:
 		query = queryToday
-	case model.FilterDone:
+	case todo.FilterDone:
 		query = queryDone
 	default:
 		query = queryAll
@@ -50,9 +50,9 @@ func (r *Repository) List(filter model.Filter) ([]model.Todo, error) {
 	}
 	defer rows.Close()
 
-	var todos []model.Todo
+	var todos []todo.Todo
 	for rows.Next() {
-		var t model.Todo
+		var t todo.Todo
 		var dueDateStr *string
 		var createdAtStr, updatedAtStr string
 
@@ -79,7 +79,7 @@ func (r *Repository) List(filter model.Filter) ([]model.Todo, error) {
 		todos = append(todos, t)
 	}
 	if todos == nil {
-		todos = []model.Todo{}
+		todos = []todo.Todo{}
 	}
 	return todos, rows.Err()
 }
@@ -117,7 +117,7 @@ func (r *Repository) ToggleDone(id int) error {
 	return nil
 }
 
-func (r *Repository) Create(title string, dueDate *time.Time) (model.Todo, error) {
+func (r *Repository) Create(title string, dueDate *time.Time) (todo.Todo, error) {
 	now := time.Now().UTC()
 
 	var dueDateStr *string
@@ -132,15 +132,15 @@ func (r *Repository) Create(title string, dueDate *time.Time) (model.Todo, error
 		title, dueDateStr, now.Format(time.RFC3339), now.Format(time.RFC3339),
 	)
 	if err != nil {
-		return model.Todo{}, fmt.Errorf("create todo: %w", err)
+		return todo.Todo{}, fmt.Errorf("create todo: %w", err)
 	}
 
 	id, err := res.LastInsertId()
 	if err != nil {
-		return model.Todo{}, fmt.Errorf("last insert id: %w", err)
+		return todo.Todo{}, fmt.Errorf("last insert id: %w", err)
 	}
 
-	return model.Todo{
+	return todo.Todo{
 		ID:        int(id),
 		Title:     title,
 		Done:      false,

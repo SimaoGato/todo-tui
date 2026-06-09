@@ -5,6 +5,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/justasandbox/my-todo-cli/todo"
 )
 
 // 4.1 – enter add mode
@@ -91,9 +93,9 @@ func TestInput_InvalidDateShowsError(t *testing.T) {
 
 func TestInput_EscDuringDateStepCancels(t *testing.T) {
 	createCalled := false
-	repo := &testRepo{OnCreate: func(title string, d *time.Time) (Todo, error) {
+	repo := &testRepo{OnCreate: func(title string, d *time.Time) (todo.Todo, error) {
 		createCalled = true
-		return Todo{ID: 99, Title: title}, nil
+		return todo.Todo{ID: 99, Title: title}, nil
 	}}
 	m := New(repo)
 	m = sendKey(m, "a")
@@ -114,11 +116,11 @@ func TestInput_EmptyDateCreatesTaskWithNoDueDate(t *testing.T) {
 	var createCalled bool
 	var createdTitle string
 	var createdDate *time.Time
-	repo := &testRepo{OnCreate: func(title string, d *time.Time) (Todo, error) {
+	repo := &testRepo{OnCreate: func(title string, d *time.Time) (todo.Todo, error) {
 		createCalled = true
 		createdTitle = title
 		createdDate = d
-		return Todo{ID: 99, Title: title}, nil
+		return todo.Todo{ID: 99, Title: title}, nil
 	}}
 	m := New(repo)
 	m = sendKey(m, "a")
@@ -142,10 +144,10 @@ func TestInput_EmptyDateCreatesTaskWithNoDueDate(t *testing.T) {
 func TestInput_ValidDateCreatesTaskWithDueDate(t *testing.T) {
 	var createCalled bool
 	var createdDate *time.Time
-	repo := &testRepo{OnCreate: func(title string, d *time.Time) (Todo, error) {
+	repo := &testRepo{OnCreate: func(title string, d *time.Time) (todo.Todo, error) {
 		createCalled = true
 		createdDate = d
-		return Todo{ID: 99, Title: title}, nil
+		return todo.Todo{ID: 99, Title: title}, nil
 	}}
 	m := New(repo)
 	m = sendKey(m, "a")
@@ -168,8 +170,8 @@ func TestInput_ValidDateCreatesTaskWithDueDate(t *testing.T) {
 }
 
 func TestInput_SaveExitsAndReloads(t *testing.T) {
-	repo := &testRepo{OnCreate: func(title string, d *time.Time) (Todo, error) {
-		return Todo{ID: 99, Title: title}, nil
+	repo := &testRepo{OnCreate: func(title string, d *time.Time) (todo.Todo, error) {
+		return todo.Todo{ID: 99, Title: title}, nil
 	}}
 	m := New(repo)
 	m = sendKey(m, "a")

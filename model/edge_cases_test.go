@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/justasandbox/my-todo-cli/todo"
 )
 
 // 6.1 – empty list guards (navigation, toggle, delete already tested in update_test.go)
@@ -32,7 +34,7 @@ func TestCursorPersistence_LoadPreservesPosition(t *testing.T) {
 	m := modelWithTasks(3)
 	m.Cursor = 1
 	next, _ := m.Update(todosLoadedMsg{
-		todos:  []Todo{{ID: 1}, {ID: 2}, {ID: 3}},
+		todos:  []todo.Todo{{ID: 1}, {ID: 2}, {ID: 3}},
 		cursor: 1,
 	})
 	am := next.(AppModel)
@@ -46,7 +48,7 @@ func TestCursorPersistence_ClampedWhenListShrinks(t *testing.T) {
 	m.Cursor = 2
 	// List shrinks to 1 item (e.g. after toggle removes task from view).
 	next, _ := m.Update(todosLoadedMsg{
-		todos:  []Todo{{ID: 1}},
+		todos:  []todo.Todo{{ID: 1}},
 		cursor: 2,
 	})
 	am := next.(AppModel)
@@ -59,7 +61,7 @@ func TestCursorPersistence_EmptyListAfterMutation(t *testing.T) {
 	m := modelWithTasks(1)
 	m.Cursor = 0
 	next, _ := m.Update(todosLoadedMsg{
-		todos:  []Todo{},
+		todos:  []todo.Todo{},
 		cursor: 0,
 	})
 	am := next.(AppModel)

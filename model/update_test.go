@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/justasandbox/my-todo-cli/todo"
 )
 
 // 3.2 – navigation
@@ -104,10 +106,10 @@ func TestTab_SwitchResetsCursor(t *testing.T) {
 // 3.4 – toggle
 
 func TestToggle_SpaceCallsToggleDone(t *testing.T) {
-	todos := []Todo{{ID: 42, Title: "toggle me"}}
+	todos := []todo.Todo{{ID: 42, Title: "toggle me"}}
 	toggled := false
 	repo := &testRepo{
-		OnList:       func(_ Filter) ([]Todo, error) { return todos, nil },
+		OnList:       func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil },
 		OnToggleDone: func(id int) error { toggled = (id == 42); return nil },
 	}
 	m := New(repo)
@@ -128,10 +130,10 @@ func TestToggle_EmptyListNoOp(t *testing.T) {
 // 3.5 – delete
 
 func TestDelete_DCallsDelete(t *testing.T) {
-	todos := []Todo{{ID: 7, Title: "delete me"}}
+	todos := []todo.Todo{{ID: 7, Title: "delete me"}}
 	deleted := false
 	repo := &testRepo{
-		OnList:   func(_ Filter) ([]Todo, error) { return todos, nil },
+		OnList:   func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil },
 		OnDelete: func(id int) error { deleted = (id == 7); return nil },
 	}
 	m := New(repo)

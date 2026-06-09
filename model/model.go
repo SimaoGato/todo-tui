@@ -6,13 +6,15 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/justasandbox/my-todo-cli/todo"
 )
 
 // Repo is the data access interface the TUI model depends on.
 // db.Repository satisfies it implicitly.
 type Repo interface {
-	List(filter Filter) ([]Todo, error)
-	Create(title string, dueDate *time.Time) (Todo, error)
+	List(filter todo.Filter) ([]todo.Todo, error)
+	Create(title string, dueDate *time.Time) (todo.Todo, error)
 	ToggleDone(id int) error
 	Delete(id int) error
 }
@@ -36,13 +38,13 @@ const (
 // todosLoadedMsg carries the result of an async List() call.
 // cursor is the desired cursor position after the load (will be clamped).
 type todosLoadedMsg struct {
-	todos  []Todo
+	todos  []todo.Todo
 	cursor int
 	err    error
 }
 
 type AppModel struct {
-	Tasks         []Todo
+	Tasks         []todo.Todo
 	Cursor        int
 	ActiveTab     Tab
 	InputMode     bool
@@ -75,14 +77,14 @@ func New(repo Repo) AppModel {
 	}
 }
 
-func tabToFilter(tab Tab) Filter {
+func tabToFilter(tab Tab) todo.Filter {
 	switch tab {
 	case TabAll:
-		return FilterAll
+		return todo.FilterAll
 	case TabCompleted:
-		return FilterDone
+		return todo.FilterDone
 	default:
-		return FilterToday
+		return todo.FilterToday
 	}
 }
 
@@ -303,4 +305,3 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	return m, nil
 }
-

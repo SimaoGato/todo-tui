@@ -3,24 +3,24 @@ package db
 import (
 	"testing"
 
-	"github.com/justasandbox/my-todo-cli/model"
+	"github.com/justasandbox/my-todo-cli/todo"
 )
 
 func TestDelete_RemovesRow(t *testing.T) {
 	repo := openTestDB(t)
 
-	todo, _ := repo.Create("to be deleted", nil)
-	if err := repo.Delete(todo.ID); err != nil {
+	task, _ := repo.Create("to be deleted", nil)
+	if err := repo.Delete(task.ID); err != nil {
 		t.Fatalf("Delete: %v", err)
 	}
 
-	todos, err := repo.List(model.FilterAll)
+	todos, err := repo.List(todo.FilterAll)
 	if err != nil {
 		t.Fatalf("List: %v", err)
 	}
 	for _, td := range todos {
-		if td.ID == todo.ID {
-			t.Errorf("deleted todo (id=%d) still returned by List", todo.ID)
+		if td.ID == task.ID {
+			t.Errorf("deleted todo (id=%d) still returned by List", task.ID)
 		}
 	}
 }
@@ -28,16 +28,16 @@ func TestDelete_RemovesRow(t *testing.T) {
 func TestDelete_NotVisibleInAnyFilter(t *testing.T) {
 	repo := openTestDB(t)
 
-	todo, _ := repo.Create("gone for good", nil)
-	repo.Delete(todo.ID)
+	task, _ := repo.Create("gone for good", nil)
+	repo.Delete(task.ID)
 
-	for _, f := range []model.Filter{model.FilterAll, model.FilterToday, model.FilterDone} {
+	for _, f := range []todo.Filter{todo.FilterAll, todo.FilterToday, todo.FilterDone} {
 		todos, err := repo.List(f)
 		if err != nil {
 			t.Fatalf("List(%v): %v", f, err)
 		}
 		for _, td := range todos {
-			if td.ID == todo.ID {
+			if td.ID == task.ID {
 				t.Errorf("deleted todo still visible under filter %v", f)
 			}
 		}
@@ -61,7 +61,7 @@ func TestDelete_OnlyRemovesTargetRow(t *testing.T) {
 		t.Fatalf("Delete: %v", err)
 	}
 
-	todos, _ := repo.List(model.FilterAll)
+	todos, _ := repo.List(todo.FilterAll)
 	if len(todos) != 1 || todos[0].ID != keep.ID {
 		t.Errorf("expected only 'keep me' (id=%d) to remain, got %v", keep.ID, todos)
 	}

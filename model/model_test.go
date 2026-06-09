@@ -2,6 +2,8 @@ package model
 
 import (
 	"testing"
+
+	"github.com/justasandbox/my-todo-cli/todo"
 )
 
 func TestNew_Defaults(t *testing.T) {
@@ -22,8 +24,8 @@ func TestNew_Defaults(t *testing.T) {
 }
 
 func TestInit_ReturnsCmdThatLoadsTodos(t *testing.T) {
-	todos := []Todo{{ID: 1, Title: "test todo"}}
-	repo := &testRepo{OnList: func(_ Filter) ([]Todo, error) { return todos, nil }}
+	todos := []todo.Todo{{ID: 1, Title: "test todo"}}
+	repo := &testRepo{OnList: func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil }}
 	m := New(repo)
 
 	cmd := m.Init()
@@ -44,7 +46,7 @@ func TestInit_ReturnsCmdThatLoadsTodos(t *testing.T) {
 func TestUpdate_TodosLoadedMsg_PopulatesTasks(t *testing.T) {
 	m := New(&testRepo{})
 
-	todos := []Todo{{ID: 1, Title: "a"}, {ID: 2, Title: "b"}}
+	todos := []todo.Todo{{ID: 1, Title: "a"}, {ID: 2, Title: "b"}}
 	next, _ := m.Update(todosLoadedMsg{todos: todos})
 
 	am := next.(AppModel)
@@ -59,11 +61,11 @@ func TestUpdate_TodosLoadedMsg_PopulatesTasks(t *testing.T) {
 func TestTabToFilter(t *testing.T) {
 	cases := []struct {
 		tab    Tab
-		filter Filter
+		filter todo.Filter
 	}{
-		{TabToday, FilterToday},
-		{TabAll, FilterAll},
-		{TabCompleted, FilterDone},
+		{TabToday, todo.FilterToday},
+		{TabAll, todo.FilterAll},
+		{TabCompleted, todo.FilterDone},
 	}
 	for _, c := range cases {
 		if got := tabToFilter(c.tab); got != c.filter {
@@ -73,8 +75,8 @@ func TestTabToFilter(t *testing.T) {
 }
 
 func TestInit_UsesTodayFilterByDefault(t *testing.T) {
-	var calledWith Filter
-	repo := &testRepo{OnList: func(f Filter) ([]Todo, error) {
+	var calledWith todo.Filter
+	repo := &testRepo{OnList: func(f todo.Filter) ([]todo.Todo, error) {
 		calledWith = f
 		return nil, nil
 	}}
@@ -83,7 +85,7 @@ func TestInit_UsesTodayFilterByDefault(t *testing.T) {
 	cmd := m.Init()
 	cmd()
 
-	if calledWith != FilterToday {
-		t.Errorf("Init() used filter %d, want FilterToday (%d)", calledWith, FilterToday)
+	if calledWith != todo.FilterToday {
+		t.Errorf("Init() used filter %d, want FilterToday (%d)", calledWith, todo.FilterToday)
 	}
 }

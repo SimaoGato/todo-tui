@@ -6,15 +6,17 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/justasandbox/my-todo-cli/todo"
 )
 
 // ── 6.5 Delete confirmation ──────────────────────────────────────────────────
 
 func TestConfirm_DSetsFlagButDoesNotDelete(t *testing.T) {
 	deleted := false
-	todos := []Todo{{ID: 1, Title: "task"}}
+	todos := []todo.Todo{{ID: 1, Title: "task"}}
 	repo := &testRepo{
-		OnList:   func(_ Filter) ([]Todo, error) { return todos, nil },
+		OnList:   func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil },
 		OnDelete: func(_ int) error { deleted = true; return nil },
 	}
 	m := New(repo)
@@ -31,9 +33,9 @@ func TestConfirm_DSetsFlagButDoesNotDelete(t *testing.T) {
 
 func TestConfirm_YConfirmsDelete(t *testing.T) {
 	deleted := false
-	todos := []Todo{{ID: 5, Title: "bye"}}
+	todos := []todo.Todo{{ID: 5, Title: "bye"}}
 	repo := &testRepo{
-		OnList:   func(_ Filter) ([]Todo, error) { return todos, nil },
+		OnList:   func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil },
 		OnDelete: func(id int) error { deleted = (id == 5); return nil },
 	}
 	m := New(repo)
@@ -48,9 +50,9 @@ func TestConfirm_YConfirmsDelete(t *testing.T) {
 
 func TestConfirm_NCancels(t *testing.T) {
 	deleted := false
-	todos := []Todo{{ID: 3, Title: "keep"}}
+	todos := []todo.Todo{{ID: 3, Title: "keep"}}
 	repo := &testRepo{
-		OnList:   func(_ Filter) ([]Todo, error) { return todos, nil },
+		OnList:   func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil },
 		OnDelete: func(_ int) error { deleted = true; return nil },
 	}
 	m := New(repo)
@@ -68,9 +70,9 @@ func TestConfirm_NCancels(t *testing.T) {
 
 func TestConfirm_EscCancels(t *testing.T) {
 	deleted := false
-	todos := []Todo{{ID: 2, Title: "keep"}}
+	todos := []todo.Todo{{ID: 2, Title: "keep"}}
 	repo := &testRepo{
-		OnList:   func(_ Filter) ([]Todo, error) { return todos, nil },
+		OnList:   func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil },
 		OnDelete: func(_ int) error { deleted = true; return nil },
 	}
 	m := New(repo)
@@ -88,9 +90,9 @@ func TestConfirm_EscCancels(t *testing.T) {
 
 func TestConfirm_OtherKeysIgnored(t *testing.T) {
 	deleted := false
-	todos := []Todo{{ID: 1, Title: "t"}}
+	todos := []todo.Todo{{ID: 1, Title: "t"}}
 	repo := &testRepo{
-		OnList:   func(_ Filter) ([]Todo, error) { return todos, nil },
+		OnList:   func(_ todo.Filter) ([]todo.Todo, error) { return todos, nil },
 		OnDelete: func(_ int) error { deleted = true; return nil },
 	}
 	m := New(repo)

@@ -6,6 +6,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/justasandbox/my-todo-cli/todo"
 )
 
 // 5.1 – tab bar
@@ -41,10 +43,10 @@ func TestRenderTabBar_ActiveLabelPresent(t *testing.T) {
 // 5.2 – task row structure
 
 func TestRenderTaskRow_CursorIndicator(t *testing.T) {
-	todo := Todo{ID: 1, Title: "task"}
+	task := todo.Todo{ID: 1, Title: "task"}
 	now := time.Now()
-	with := renderTaskRow(todo, true, now, defaultTitleWidth)
-	without := renderTaskRow(todo, false, now, defaultTitleWidth)
+	with := renderTaskRow(task, true, now, defaultTitleWidth)
+	without := renderTaskRow(task, false, now, defaultTitleWidth)
 	if !strings.Contains(with, ">") {
 		t.Error("cursor row should contain '>'")
 	}
@@ -54,24 +56,24 @@ func TestRenderTaskRow_CursorIndicator(t *testing.T) {
 }
 
 func TestRenderTaskRow_CheckboxPending(t *testing.T) {
-	todo := Todo{ID: 1, Title: "pending"}
-	row := renderTaskRow(todo, false, time.Now(), defaultTitleWidth)
+	task := todo.Todo{ID: 1, Title: "pending"}
+	row := renderTaskRow(task, false, time.Now(), defaultTitleWidth)
 	if !strings.Contains(row, "[ ]") {
 		t.Error("pending task should show '[ ]'")
 	}
 }
 
 func TestRenderTaskRow_CheckboxDone(t *testing.T) {
-	todo := Todo{ID: 1, Title: "done task", Done: true}
-	row := renderTaskRow(todo, false, time.Now(), defaultTitleWidth)
+	task := todo.Todo{ID: 1, Title: "done task", Done: true}
+	row := renderTaskRow(task, false, time.Now(), defaultTitleWidth)
 	if !strings.Contains(row, "[x]") {
 		t.Error("done task should show '[x]'")
 	}
 }
 
 func TestRenderTaskRow_NoDueDateShowsDash(t *testing.T) {
-	todo := Todo{ID: 1, Title: "no date"}
-	row := renderTaskRow(todo, false, time.Now(), defaultTitleWidth)
+	task := todo.Todo{ID: 1, Title: "no date"}
+	row := renderTaskRow(task, false, time.Now(), defaultTitleWidth)
 	if !strings.Contains(row, "—") {
 		t.Error("task without due date should show '—'")
 	}
@@ -79,8 +81,8 @@ func TestRenderTaskRow_NoDueDateShowsDash(t *testing.T) {
 
 func TestRenderTaskRow_DueDateFormatted(t *testing.T) {
 	due := time.Date(2026, 12, 25, 0, 0, 0, 0, time.UTC)
-	todo := Todo{ID: 1, Title: "xmas", DueDate: &due}
-	row := renderTaskRow(todo, false, time.Now(), defaultTitleWidth)
+	task := todo.Todo{ID: 1, Title: "xmas", DueDate: &due}
+	row := renderTaskRow(task, false, time.Now(), defaultTitleWidth)
 	if !strings.Contains(row, "2026-12-25") {
 		t.Error("task with due date should show formatted date")
 	}
@@ -88,8 +90,8 @@ func TestRenderTaskRow_DueDateFormatted(t *testing.T) {
 
 func TestRenderTaskRow_TitleTruncated(t *testing.T) {
 	long := strings.Repeat("a", 50)
-	todo := Todo{ID: 1, Title: long}
-	row := renderTaskRow(todo, false, time.Now(), defaultTitleWidth)
+	task := todo.Todo{ID: 1, Title: long}
+	row := renderTaskRow(task, false, time.Now(), defaultTitleWidth)
 	if strings.Contains(row, long) {
 		t.Error("long title should be truncated")
 	}
@@ -102,8 +104,8 @@ func TestRenderTaskRow_TitleTruncated(t *testing.T) {
 
 func TestRenderTaskRow_OverdueNoPanic(t *testing.T) {
 	yesterday := time.Now().AddDate(0, 0, -1)
-	todo := Todo{ID: 1, Title: "overdue", DueDate: &yesterday}
-	row := renderTaskRow(todo, false, time.Now(), defaultTitleWidth)
+	task := todo.Todo{ID: 1, Title: "overdue", DueDate: &yesterday}
+	row := renderTaskRow(task, false, time.Now(), defaultTitleWidth)
 	if !strings.Contains(row, "overdue") {
 		t.Error("overdue row should contain task title")
 	}
@@ -112,8 +114,8 @@ func TestRenderTaskRow_OverdueNoPanic(t *testing.T) {
 func TestRenderTaskRow_DueTodayNoPanic(t *testing.T) {
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	todo := Todo{ID: 1, Title: "due today", DueDate: &today}
-	row := renderTaskRow(todo, false, now, defaultTitleWidth)
+	task := todo.Todo{ID: 1, Title: "due today", DueDate: &today}
+	row := renderTaskRow(task, false, now, defaultTitleWidth)
 	if !strings.Contains(row, "due today") {
 		t.Error("due-today row should contain task title")
 	}
@@ -121,8 +123,8 @@ func TestRenderTaskRow_DueTodayNoPanic(t *testing.T) {
 
 func TestRenderTaskRow_FutureDateNoPanic(t *testing.T) {
 	future := time.Now().AddDate(0, 0, 7)
-	todo := Todo{ID: 1, Title: "future", DueDate: &future}
-	row := renderTaskRow(todo, false, time.Now(), defaultTitleWidth)
+	task := todo.Todo{ID: 1, Title: "future", DueDate: &future}
+	row := renderTaskRow(task, false, time.Now(), defaultTitleWidth)
 	if !strings.Contains(row, "future") {
 		t.Error("future row should contain task title")
 	}
@@ -189,7 +191,7 @@ func TestView_EmptyStateShownWhenNoTasks(t *testing.T) {
 
 func TestView_TaskTitleShown(t *testing.T) {
 	m := New(&testRepo{})
-	m.Tasks = []Todo{{ID: 1, Title: "my important task"}}
+	m.Tasks = []todo.Todo{{ID: 1, Title: "my important task"}}
 	v := m.View()
 	if !strings.Contains(v, "my important task") {
 		t.Error("view should show task title")
