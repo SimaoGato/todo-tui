@@ -155,7 +155,8 @@ func TestDelete_DCallsDelete(t *testing.T) {
 	m := New(repo)
 	m.Tasks = todos
 
-	sendKey(m, "d")
+	m = sendKey(m, "d") // shows confirm prompt
+	sendKey(m, "y")     // confirms
 	if !deleted {
 		t.Error("Delete not called with correct ID")
 	}

@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-const titleWidth = 40
+const defaultTitleWidth = 40
 
 var (
 	styleTabActive   = lipgloss.NewStyle().Bold(true).Underline(true)
@@ -19,6 +19,7 @@ var (
 	styleDone        = lipgloss.NewStyle().Faint(true).Strikethrough(true)
 	styleHelp        = lipgloss.NewStyle().Faint(true)
 	styleError       = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
+	styleConfirm     = lipgloss.NewStyle().Foreground(lipgloss.Color("3")).Bold(true)
 )
 
 func truncate(s string, max int) string {
@@ -54,7 +55,7 @@ func renderTabBar(active Tab) string {
 
 // 5.2 + 5.3 – task row with color coding
 
-func renderTaskRow(todo Todo, isCursor bool, now time.Time) string {
+func renderTaskRow(todo Todo, isCursor bool, now time.Time, titleWidth int) string {
 	cursor := "  "
 	if isCursor {
 		cursor = "> "
@@ -89,6 +90,13 @@ func renderTaskRow(todo Todo, isCursor bool, now time.Time) string {
 	return line
 }
 
+// 6.5 – confirm-delete bar
+
+func renderConfirmBar(title string) string {
+	label := "Delete \"" + truncate(title, 30) + "\"? [y/n]"
+	return styleConfirm.Render(label)
+}
+
 // 5.4 – help bar
 
 func renderHelpBar(inputMode bool) string {
@@ -107,6 +115,18 @@ func renderEmptyState(tab Tab) string {
 		TabCompleted: "No completed tasks",
 	}
 	return styleHelp.Render(msgs[tab])
+}
+
+// titleColWidth returns the title column width based on terminal width.
+func (m AppModel) titleColWidth() int {
+	// prefix: "> [x] " = 6, suffix: "  YYYY-MM-DD" = 12, min title = 20
+	if m.Width > 0 {
+		if w := m.Width - 20; w >= 20 {
+			return w
+		}
+		return 20
+	}
+	return defaultTitleWidth
 }
 
 // View renders the full TUI screen.
@@ -130,6 +150,7 @@ func (m AppModel) View() string {
 		return sb.String()
 	}
 
+	tw := m.titleColWidth()
 	var sb strings.Builder
 	sb.WriteString(renderTabBar(m.ActiveTab))
 	sb.WriteString("\n\n")
@@ -140,13 +161,17 @@ func (m AppModel) View() string {
 	} else {
 		now := time.Now()
 		for i, task := range m.Tasks {
-			sb.WriteString(renderTaskRow(task, i == m.Cursor, now))
+			sb.WriteString(renderTaskRow(task, i == m.Cursor, now, tw))
 			sb.WriteString("\n")
 		}
 	}
 
 	sb.WriteString("\n")
-	sb.WriteString(renderHelpBar(false))
+	if m.ConfirmDelete && len(m.Tasks) > 0 {
+		sb.WriteString(renderConfirmBar(m.Tasks[m.Cursor].Title))
+	} else {
+		sb.WriteString(renderHelpBar(false))
+	}
 	sb.WriteString("\n")
 	return sb.String()
 }

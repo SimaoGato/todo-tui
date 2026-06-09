@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -12,6 +13,9 @@ import (
 
 func dbPath() string {
 	if p := os.Getenv("TODO_DB_PATH"); p != "" {
+		if abs, err := filepath.Abs(p); err == nil {
+			return abs
+		}
 		return p
 	}
 	home, err := os.UserHomeDir()
@@ -32,7 +36,7 @@ func main() {
 	repo := db.NewRepository(conn)
 	m := model.New(repo)
 
-	p := tea.NewProgram(m)
+	p := tea.NewProgram(m, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)

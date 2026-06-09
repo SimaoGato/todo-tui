@@ -34,21 +34,26 @@ const (
 )
 
 // todosLoadedMsg carries the result of an async List() call.
+// cursor is the desired cursor position after the load (will be clamped).
 type todosLoadedMsg struct {
-	todos []Todo
+	todos  []Todo
+	cursor int
 }
 
 type AppModel struct {
-	Tasks        []Todo
-	Cursor       int
-	ActiveTab    Tab
-	InputMode    bool
-	inputStep    inputStep
-	titleInput   textinput.Model
-	dateInput    textinput.Model
-	pendingTitle string
-	inputErr     string
-	Repo         Repo
+	Tasks         []Todo
+	Cursor        int
+	ActiveTab     Tab
+	InputMode     bool
+	inputStep     inputStep
+	titleInput    textinput.Model
+	dateInput     textinput.Model
+	pendingTitle  string
+	inputErr      string
+	Repo          Repo
+	Width         int
+	Height        int
+	ConfirmDelete bool
 }
 
 func New(repo Repo) AppModel {
@@ -80,9 +85,10 @@ func tabToFilter(tab Tab) Filter {
 }
 
 func (m AppModel) loadTodos() tea.Cmd {
+	cursor := m.Cursor
 	return func() tea.Msg {
 		todos, _ := m.Repo.List(tabToFilter(m.ActiveTab))
-		return todosLoadedMsg{todos: todos}
+		return todosLoadedMsg{todos: todos, cursor: cursor}
 	}
 }
 
@@ -95,7 +101,19 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case todosLoadedMsg:
 		m.Tasks = msg.todos
-		m.Cursor = 0
+		switch {
+		case len(m.Tasks) == 0:
+			m.Cursor = 0
+		case msg.cursor >= len(m.Tasks):
+			m.Cursor = len(m.Tasks) - 1
+		default:
+			m.Cursor = msg.cursor
+		}
+		return m, nil
+
+	case tea.WindowSizeMsg:
+		m.Width = msg.Width
+		m.Height = msg.Height
 		return m, nil
 
 	case tea.KeyMsg:
@@ -147,6 +165,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, m.loadTodos()
 			}
 
+			// 6.7 – 't' fills today's date when the date field is empty
+			if m.inputStep == stepDate && msg.Type == tea.KeyRunes &&
+				string(msg.Runes) == "t" && m.dateInput.Value() == "" {
+				m.dateInput.SetValue(time.Now().Format("2006-01-02"))
+				m.dateInput.CursorEnd()
+				return m, nil
+			}
+
 			// Delegate remaining keys to the active input field.
 			var cmd tea.Cmd
 			if m.inputStep == stepTitle {
@@ -155,6 +181,19 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.dateInput, cmd = m.dateInput.Update(msg)
 			}
 			return m, cmd
+		}
+
+		// 6.5 – confirm-delete gate: only y / n / esc are processed.
+		if m.ConfirmDelete {
+			switch {
+			case msg.String() == "y":
+				_ = m.Repo.Delete(m.Tasks[m.Cursor].ID)
+				m.ConfirmDelete = false
+				return m, m.loadTodos()
+			case msg.String() == "n", msg.Type == tea.KeyEsc:
+				m.ConfirmDelete = false
+			}
+			return m, nil
 		}
 
 		switch msg.String() {
@@ -208,21 +247,35 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case " ":
 			if len(m.Tasks) > 0 {
 				_ = m.Repo.ToggleDone(m.Tasks[m.Cursor].ID)
-				if m.Cursor >= len(m.Tasks)-1 {
-					m.Cursor = max(0, len(m.Tasks)-2)
-				}
 				return m, m.loadTodos()
 			}
 
-		// 3.5 – delete
+		// 3.5 / 6.5 – delete: show confirmation prompt first
 		case "d":
 			if len(m.Tasks) > 0 {
-				_ = m.Repo.Delete(m.Tasks[m.Cursor].ID)
-				if m.Cursor >= len(m.Tasks)-1 {
-					m.Cursor = max(0, len(m.Tasks)-2)
-				}
-				return m, m.loadTodos()
+				m.ConfirmDelete = true
 			}
+
+		// 6.6 – arrow key navigation
+		case "up":
+			if len(m.Tasks) > 0 {
+				m.Cursor = (m.Cursor - 1 + len(m.Tasks)) % len(m.Tasks)
+			}
+
+		case "down":
+			if len(m.Tasks) > 0 {
+				m.Cursor = (m.Cursor + 1) % len(m.Tasks)
+			}
+
+		case "right":
+			m.ActiveTab = (m.ActiveTab + 1) % 3
+			m.Cursor = 0
+			return m, m.loadTodos()
+
+		case "left":
+			m.ActiveTab = (m.ActiveTab + 2) % 3
+			m.Cursor = 0
+			return m, m.loadTodos()
 		}
 	}
 
