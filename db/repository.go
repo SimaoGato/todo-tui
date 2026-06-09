@@ -74,8 +74,13 @@ func (r *Repository) List(filter todo.Filter) ([]todo.Todo, error) {
 			d = d.Truncate(24 * time.Hour)
 			t.DueDate = &d
 		}
-		t.CreatedAt, _ = time.Parse(time.RFC3339, createdAtStr)
-		t.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAtStr)
+		var tsErr error
+		if t.CreatedAt, tsErr = time.Parse(time.RFC3339, createdAtStr); tsErr != nil {
+			return nil, fmt.Errorf("parse created_at: %w", tsErr)
+		}
+		if t.UpdatedAt, tsErr = time.Parse(time.RFC3339, updatedAtStr); tsErr != nil {
+			return nil, fmt.Errorf("parse updated_at: %w", tsErr)
+		}
 		todos = append(todos, t)
 	}
 	if todos == nil {

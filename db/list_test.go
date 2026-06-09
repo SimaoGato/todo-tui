@@ -110,6 +110,22 @@ func TestList_TodayFilter(t *testing.T) {
 	}
 }
 
+func TestList_CorruptedTimestampReturnsError(t *testing.T) {
+	repo := openTestDB(t)
+	_, err := repo.db.Exec(
+		`INSERT INTO todos (title, done, due_date, created_at, updated_at) VALUES (?, 0, NULL, ?, ?)`,
+		"bad-ts", "not-a-timestamp", "also-not-a-timestamp",
+	)
+	if err != nil {
+		t.Fatalf("direct insert: %v", err)
+	}
+
+	_, err = repo.List(todo.FilterAll)
+	if err == nil {
+		t.Error("expected error from List() with corrupted timestamp, got nil")
+	}
+}
+
 func TestList_DoneFilter(t *testing.T) {
 	repo := openTestDB(t)
 	base := time.Now().UTC()

@@ -25,6 +25,7 @@ const (
 	TabToday Tab = iota
 	TabAll
 	TabCompleted
+	tabCount
 )
 
 type inputStep int
@@ -277,7 +278,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.loadTodos()
 
 		case "tab":
-			m.ActiveTab = (m.ActiveTab + 1) % 3
+			m.ActiveTab = (m.ActiveTab + 1) % tabCount
 			m.Cursor = 0
 			return m, m.loadTodos()
 
@@ -313,12 +314,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "right":
-			m.ActiveTab = (m.ActiveTab + 1) % 3
+			m.ActiveTab = (m.ActiveTab + 1) % tabCount
 			m.Cursor = 0
 			return m, m.loadTodos()
 
 		case "left":
-			m.ActiveTab = (m.ActiveTab + 2) % 3
+			m.ActiveTab = (m.ActiveTab + 2) % tabCount
 			m.Cursor = 0
 			return m, m.loadTodos()
 		}
