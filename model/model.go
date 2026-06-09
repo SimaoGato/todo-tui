@@ -38,6 +38,7 @@ const (
 type todosLoadedMsg struct {
 	todos  []Todo
 	cursor int
+	err    error
 }
 
 type AppModel struct {
@@ -50,6 +51,7 @@ type AppModel struct {
 	dateInput     textinput.Model
 	pendingTitle  string
 	inputErr      string
+	errorMsg      string
 	Repo          Repo
 	Width         int
 	Height        int
@@ -87,8 +89,8 @@ func tabToFilter(tab Tab) Filter {
 func (m AppModel) loadTodos() tea.Cmd {
 	cursor := m.Cursor
 	return func() tea.Msg {
-		todos, _ := m.Repo.List(tabToFilter(m.ActiveTab))
-		return todosLoadedMsg{todos: todos, cursor: cursor}
+		todos, err := m.Repo.List(tabToFilter(m.ActiveTab))
+		return todosLoadedMsg{todos: todos, cursor: cursor, err: err}
 	}
 }
 
@@ -100,6 +102,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case todosLoadedMsg:
+		if msg.err != nil {
+			m.errorMsg = "load failed: " + msg.err.Error()
+			return m, nil
+		}
+		m.errorMsg = ""
 		m.Tasks = msg.todos
 		switch {
 		case len(m.Tasks) == 0:
@@ -156,6 +163,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					dueDate = &t
 				}
 				if _, err := m.Repo.Create(m.pendingTitle, dueDate); err != nil {
+					m.errorMsg = "create failed: " + err.Error()
+					m.InputMode = false
+					m.inputStep = stepNone
+					m.inputErr = ""
+					m.pendingTitle = ""
 					return m, nil
 				}
 				m.InputMode = false
@@ -187,7 +199,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.ConfirmDelete {
 			switch {
 			case msg.String() == "y":
-				_ = m.Repo.Delete(m.Tasks[m.Cursor].ID)
+				if err := m.Repo.Delete(m.Tasks[m.Cursor].ID); err != nil {
+					m.errorMsg = "delete failed: " + err.Error()
+					m.ConfirmDelete = false
+					return m, nil
+				}
 				m.ConfirmDelete = false
 				return m, m.loadTodos()
 			case msg.String() == "n", msg.Type == tea.KeyEsc:
@@ -195,6 +211,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
+
+		// Clear any displayed error on the next key press in normal mode.
+		m.errorMsg = ""
 
 		switch msg.String() {
 
@@ -246,7 +265,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// 3.4 – toggle completion
 		case " ":
 			if len(m.Tasks) > 0 {
-				_ = m.Repo.ToggleDone(m.Tasks[m.Cursor].ID)
+				if err := m.Repo.ToggleDone(m.Tasks[m.Cursor].ID); err != nil {
+					m.errorMsg = "toggle failed: " + err.Error()
+					return m, nil
+				}
 				return m, m.loadTodos()
 			}
 

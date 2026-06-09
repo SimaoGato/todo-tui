@@ -169,6 +169,8 @@ func (m AppModel) View() string {
 	sb.WriteString("\n")
 	if m.ConfirmDelete && len(m.Tasks) > 0 {
 		sb.WriteString(renderConfirmBar(m.Tasks[m.Cursor].Title))
+	} else if m.errorMsg != "" {
+		sb.WriteString(styleError.Render(m.errorMsg))
 	} else {
 		sb.WriteString(renderHelpBar(false))
 	}
