@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/justasandbox/my-todo-cli/todo"
+	"github.com/justasandbox/my-todo-cli/internal/todo"
 )
 
 // seed inserts a todo directly into the DB, optionally marking it done, with a

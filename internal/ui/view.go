@@ -1,4 +1,4 @@
-package model
+package ui
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/justasandbox/my-todo-cli/todo"
+	"github.com/justasandbox/my-todo-cli/internal/todo"
 )
 
 const defaultTitleWidth = 40

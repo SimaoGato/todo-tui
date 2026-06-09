@@ -1,9 +1,9 @@
-package model
+package ui
 
 import (
 	"testing"
 
-	"github.com/justasandbox/my-todo-cli/todo"
+	"github.com/justasandbox/my-todo-cli/internal/todo"
 )
 
 func TestNew_Defaults(t *testing.T) {

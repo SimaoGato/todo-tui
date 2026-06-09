@@ -1,4 +1,4 @@
-package model
+package ui
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/justasandbox/my-todo-cli/todo"
+	"github.com/justasandbox/my-todo-cli/internal/todo"
 )
 
 // AC1 + AC7 — ToggleDone is not called synchronously; cmd dispatches it.

@@ -866,3 +866,193 @@ h4. Operational Risks
 h4. Out of Scope
 * Persisting session history across runs
 * Showing which specific tasks were completed or deleted
+
+---
+
+h2. Epic 7: Codebase Improvements
+
+Address architectural debt, improve maintainability, and harden reliability so the codebase supports future features without accumulating friction.
+
+---
+
+h3. 7.8 Timezone consistency for due-date filtering and display (TT-78)
+
+*Estimation:* 4h
+
+h4. User Story
+As a user I want my task due dates to be filtered and displayed using a single, consistent timezone so I don't see tasks incorrectly categorized as "overdue" or "due today" due to system vs. database mismatches.
+
+h4. Acceptance Criteria
+* AC1: All due-date comparisons (SQL @queryToday@, Go color-coding logic in @view.go@) use the same timezone
+* AC2: Due dates entered by the user are interpreted as local time (the user's system timezone)
+* AC3: @time.Parse@ calls for due dates are replaced with @time.ParseInLocation@ using the system local timezone
+* AC4: The @renderTaskRow@ color-coding comparison uses calendar-date comparison (@Year/Month/Day@ tuple), not @Truncate(24h)@ which is UTC-aligned
+* AC5: The @Create@ method stores due dates as the date string the user entered (no misleading @.UTC()@ conversion on a date-only value)
+* AC6: A test verifies that a due date entered as "today" in a non-UTC timezone is correctly identified as "due today" in both the SQL filter and the view layer
+* AC7: All existing tests pass
+* AC8: @go vet ./...@ passes
+
+h4. Implementation Details
+* In @repository.go@, replace @time.Parse("2006-01-02", ...)@ with @time.ParseInLocation("2006-01-02", ..., time.Now().Location())@
+* In @view.go@, replace the @Truncate(24h)@ comparison with @Date()@ tuple comparison
+* In @repository.go:Create@, change @dueDate.UTC().Format("2006-01-02")@ to @dueDate.Format("2006-01-02")@
+* SQL @queryToday@ already uses @DATE('now', 'localtime')@ — no change needed
+
+h4. Operational Risks
+* Tests that depend on UTC assumptions may need updating
+
+h4. Out of Scope
+* User-configurable timezone setting
+* Timezone display in the UI
+
+---
+
+h3. 7.9 Restructure project to idiomatic Go layout (TT-79)
+
+*Estimation:* 5h
+
+h4. User Story
+As a developer I want the codebase restructured to use standard Go directories (@cmd/@ and @internal/@) and semantic package names so I can scale the application without fighting Go conventions.
+
+h4. Acceptance Criteria
+* AC1: @main.go@ and @main_test.go@ move to @cmd/my-todo-cli/@
+* AC2: @db/@ moves to @internal/db/@
+* AC3: @model/@ moves to @internal/ui/@ and package declaration changes to @package ui@
+* AC4: @todo/@ moves to @internal/todo/@
+* AC5: All import paths are updated across all Go files
+* AC6: @go build ./cmd/my-todo-cli@ compiles without errors
+* AC7: All tests pass with @go test ./... -race -count=1@
+* AC8: @go vet ./...@ passes
+* AC9: @.github/workflows/ci.yml@ is updated
+* AC10: @CLAUDE.md@ package layout section is updated
+
+h4. Implementation Details
+* Target layout: @cmd/my-todo-cli/main.go@, @internal/todo/@, @internal/db/@, @internal/ui/@
+* @internal/@ prevents external imports — correct for an application
+* Rename @model@ → @ui@ since the package contains the full TUI layer
+* Pure mechanical refactor with no logic changes
+
+h4. Operational Risks
+* Large diff — coordinate with other in-flight branches
+
+h4. Out of Scope
+* Logic changes
+* New packages beyond the directory restructuring
+
+---
+
+h3. 7.10 Rename todo.Todo to todo.Task (TT-80)
+
+*Estimation:* 2h
+
+h4. User Story
+As a developer I want the @todo.Todo@ struct renamed to @todo.Task@ so I can eliminate package stuttering and improve readability.
+
+h4. Acceptance Criteria
+* AC1: @todo.Todo@ is renamed to @todo.Task@ in @todo/todo.go@
+* AC2: All references across @db/@, @model/@, @main.go@, and test files are updated
+* AC3: @todosLoadedMsg.todos@ field is renamed to @tasks@ for consistency
+* AC4: All tests pass with no behavior changes
+* AC5: @go vet ./...@ passes
+
+h4. Implementation Details
+* Global find-and-replace refactor — no logic changes
+* Can be done before or after story 7.9 (orthogonal)
+
+h4. Operational Risks
+* None — pure mechanical rename
+
+h4. Out of Scope
+* Renaming the @todo@ package itself
+
+---
+
+h3. 7.11 Extract input form and confirm dialog into independent sub-models (TT-81)
+
+*Estimation:* 6h
+
+h4. User Story
+As a developer I want the monolithic BubbleTea model broken down into smaller, independent sub-models so I can easily test, maintain, and expand the UI.
+
+h4. Acceptance Criteria
+* AC1: The add-task input flow is extracted into a @TaskInput@ sub-model in @taskinput.go@
+* AC2: @TaskInput@ implements Bubbletea's child-component pattern with its own @Update()@ and @View()@
+* AC3: @AppModel@ delegates to @TaskInput@ when @InputMode@ is true
+* AC4: The delete-confirmation flow is extracted into a @ConfirmDialog@ sub-model in @confirmdialog.go@
+* AC5: @AppModel@ no longer holds raw input fields — these live inside @TaskInput@
+* AC6: @AppModel@ no longer holds @ConfirmDelete@ — this lives inside @ConfirmDialog@
+* AC7: All existing tests pass without behavior changes
+* AC8: @go vet ./...@ passes
+
+h4. Implementation Details
+* @TaskInput@ emits @TaskInputResult@ on submit, cancel message on Esc
+* @ConfirmDialog@ emits @confirmYesMsg@ or @confirmNoMsg@
+* @updateInputMode@ and @updateConfirmDelete@ methods are replaced by sub-model @Update()@ methods
+
+h4. Operational Risks
+* Sub-model message routing adds indirection — keep it simple
+
+h4. Out of Scope
+* Extracting the task list or tab bar into sub-models
+
+---
+
+h3. 7.12 Support natural language due-date input (TT-82)
+
+*Estimation:* 4h
+
+h4. User Story
+As a user I want the ability to type due dates using natural language (e.g., "tomorrow", "next Tuesday", "in 3 days") so I can rapidly add deadlines without formatting them as strict YYYY-MM-DD.
+
+h4. Acceptance Criteria
+* AC1: The date input field accepts: @today@/@tod@, @tomorrow@/@tom@, @yesterday@, weekday abbreviations (@mon@–@sun@), @next <weekday>@, @in N days@
+* AC2: Strict @YYYY-MM-DD@ input continues to work
+* AC3: The @t@ shortcut continues to work unchanged
+* AC4: After parsing, the resolved @YYYY-MM-DD@ date is displayed in the input field for verification
+* AC5: Invalid input shows the existing inline error message
+* AC6: Unit tests cover each recognized phrase
+* AC7: All existing input and date tests pass
+
+h4. Implementation Details
+* Implement @parseNaturalDate(input string, now time.Time) (*time.Time, error)@
+* Call it as a fallback when @time.Parse("2006-01-02", ...)@ fails
+* No new dependencies — hand-written parser with @strings.ToLower@ + switch
+
+h4. Operational Risks
+* Ambiguity in "next weekday" semantics — document chosen behavior clearly
+
+h4. Out of Scope
+* Full NLP date parsing
+* Relative month/year expressions
+
+---
+
+h3. 7.13 Support persistent configuration file (TT-83)
+
+*Estimation:* 5h
+
+h4. User Story
+As a user I want the application to support a configuration file (@~/.config/todo-cli/config.yaml@) so I can persistently define my preferred database path, UI colors, and default tab without setting environment variables every time.
+
+h4. Acceptance Criteria
+* AC1: On startup, the application looks for a config file at @~/.config/todo-cli/config.yaml@
+* AC2: @TODO_CONFIG_PATH@ environment variable overrides the default config file location
+* AC3: Supported keys: @db_path@, @default_tab@ (@today@/@all@/@completed@), @colors.overdue@, @colors.due_today@
+* AC4: @TODO_DB_PATH@ env var takes precedence over config file's @db_path@
+* AC5: Missing config file is not an error — defaults are used silently
+* AC6: Malformed YAML produces a clear error message and exits non-zero
+* AC7: Unit tests verify config loading, env override precedence, default values, malformed file error
+* AC8: @go vet ./...@ passes
+
+h4. Implementation Details
+* Add a @config/@ package with @Load() (Config, error)@
+* Use @gopkg.in/yaml.v3@ — no heavy config frameworks
+* Precedence: env var > config file > hard-coded default
+* Color values applied as @lipgloss.Color(...)@ — Lipgloss styles become instance fields initialized from config
+
+h4. Operational Risks
+* Lipgloss styles are currently package-level vars — refactoring them to instance fields touches @view.go@ extensively
+
+h4. Out of Scope
+* Hot-reloading config on file change
+* CLI flags for overriding config values

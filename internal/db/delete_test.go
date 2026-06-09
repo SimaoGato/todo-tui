@@ -3,7 +3,7 @@ package db
 import (
 	"testing"
 
-	"github.com/justasandbox/my-todo-cli/todo"
+	"github.com/justasandbox/my-todo-cli/internal/todo"
 )
 
 func TestDelete_RemovesRow(t *testing.T) {

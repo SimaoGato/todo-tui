@@ -1,4 +1,4 @@
-package model
+package ui
 
 import (
 	"strings"
@@ -7,7 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/justasandbox/my-todo-cli/todo"
+	"github.com/justasandbox/my-todo-cli/internal/todo"
 )
 
 // 5.1 – tab bar

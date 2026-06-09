@@ -18,7 +18,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Build
-        run: go build ./...
+        run: go build ./cmd/my-todo-cli
 
       - name: Vet
         run: go vet ./...

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/justasandbox/my-todo-cli/todo"
+	"github.com/justasandbox/my-todo-cli/internal/todo"
 )
 
 const (

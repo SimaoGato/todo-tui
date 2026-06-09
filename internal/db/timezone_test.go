@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/justasandbox/my-todo-cli/todo"
+	"github.com/justasandbox/my-todo-cli/internal/todo"
 )
 
 // TestCreate_DueDatePreservesLocalDate verifies that Create stores the local calendar

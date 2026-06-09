@@ -1,11 +1,11 @@
-package model
+package ui
 
 import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/justasandbox/my-todo-cli/todo"
+	"github.com/justasandbox/my-todo-cli/internal/todo"
 )
 
 // helper: run a confirm-delete sequence (d → y) and deliver the reload msg.

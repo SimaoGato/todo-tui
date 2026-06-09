@@ -1,11 +1,11 @@
-package model
+package ui
 
 import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/justasandbox/my-todo-cli/todo"
+	"github.com/justasandbox/my-todo-cli/internal/todo"
 )
 
 type testRepo struct {

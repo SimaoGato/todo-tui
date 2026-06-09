@@ -1,11 +1,11 @@
-package model
+package ui
 
 import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/justasandbox/my-todo-cli/todo"
+	"github.com/justasandbox/my-todo-cli/internal/todo"
 )
 
 // 6.1 – empty list guards (navigation, toggle, delete already tested in update_test.go)
