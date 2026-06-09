@@ -170,7 +170,7 @@ func TestRenderEmptyState_Messages(t *testing.T) {
 // full View() integration
 
 func TestView_NormalModeContainsTabsAndHelp(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	v := m.View()
 	for _, want := range []string{"Today", "All", "Completed", "a: add", "q: quit"} {
 		if !strings.Contains(v, want) {
@@ -180,7 +180,7 @@ func TestView_NormalModeContainsTabsAndHelp(t *testing.T) {
 }
 
 func TestView_EmptyStateShownWhenNoTasks(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	v := m.View()
 	if !strings.Contains(v, "No tasks for today") {
 		t.Error("empty Today view should show 'No tasks for today'")
@@ -188,7 +188,7 @@ func TestView_EmptyStateShownWhenNoTasks(t *testing.T) {
 }
 
 func TestView_TaskTitleShown(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	m.Tasks = []Todo{{ID: 1, Title: "my important task"}}
 	v := m.View()
 	if !strings.Contains(v, "my important task") {
@@ -197,7 +197,7 @@ func TestView_TaskTitleShown(t *testing.T) {
 }
 
 func TestView_InputMode_TitlePrompt(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	m = sendKey(m, "a")
 	v := m.View()
 	if !strings.Contains(v, "New task:") {
@@ -209,7 +209,7 @@ func TestView_InputMode_TitlePrompt(t *testing.T) {
 }
 
 func TestView_InputMode_DatePrompt(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	m = sendKey(m, "a")
 	m = typeString(m, "Buy milk")
 	m = sendKeyType(m, tea.KeyEnter)

@@ -2,21 +2,10 @@ package model
 
 import (
 	"testing"
-	"time"
 )
 
-// mockRepo implements Repo for testing without a real database.
-type mockRepo struct {
-	todos []Todo
-}
-
-func (m *mockRepo) List(_ Filter) ([]Todo, error)                       { return m.todos, nil }
-func (m *mockRepo) Create(_ string, _ *time.Time) (Todo, error)         { return Todo{}, nil }
-func (m *mockRepo) ToggleDone(_ int) error                              { return nil }
-func (m *mockRepo) Delete(_ int) error                                  { return nil }
-
 func TestNew_Defaults(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 
 	if m.Cursor != 0 {
 		t.Errorf("cursor: got %d, want 0", m.Cursor)
@@ -33,7 +22,8 @@ func TestNew_Defaults(t *testing.T) {
 }
 
 func TestInit_ReturnsCmdThatLoadsTodos(t *testing.T) {
-	repo := &mockRepo{todos: []Todo{{ID: 1, Title: "test todo"}}}
+	todos := []Todo{{ID: 1, Title: "test todo"}}
+	repo := &testRepo{OnList: func(_ Filter) ([]Todo, error) { return todos, nil }}
 	m := New(repo)
 
 	cmd := m.Init()
@@ -52,7 +42,7 @@ func TestInit_ReturnsCmdThatLoadsTodos(t *testing.T) {
 }
 
 func TestUpdate_TodosLoadedMsg_PopulatesTasks(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 
 	todos := []Todo{{ID: 1, Title: "a"}, {ID: 2, Title: "b"}}
 	next, _ := m.Update(todosLoadedMsg{todos: todos})
@@ -84,28 +74,16 @@ func TestTabToFilter(t *testing.T) {
 
 func TestInit_UsesTodayFilterByDefault(t *testing.T) {
 	var calledWith Filter
-	repo := &mockRepo{}
-	// Override List to capture which filter is used.
-	spy := &spyRepo{inner: repo, onList: func(f Filter) { calledWith = f }}
+	repo := &testRepo{OnList: func(f Filter) ([]Todo, error) {
+		calledWith = f
+		return nil, nil
+	}}
 
-	m := New(spy)
+	m := New(repo)
 	cmd := m.Init()
-	cmd() // execute the command
+	cmd()
 
 	if calledWith != FilterToday {
 		t.Errorf("Init() used filter %d, want FilterToday (%d)", calledWith, FilterToday)
 	}
 }
-
-type spyRepo struct {
-	inner  Repo
-	onList func(Filter)
-}
-
-func (s *spyRepo) List(f Filter) ([]Todo, error) {
-	s.onList(f)
-	return s.inner.List(f)
-}
-func (s *spyRepo) Create(title string, d *time.Time) (Todo, error) { return s.inner.Create(title, d) }
-func (s *spyRepo) ToggleDone(id int) error                         { return s.inner.ToggleDone(id) }
-func (s *spyRepo) Delete(id int) error                             { return s.inner.Delete(id) }

@@ -12,12 +12,13 @@ import (
 
 func TestConfirm_DSetsFlagButDoesNotDelete(t *testing.T) {
 	deleted := false
-	repo := &spyDeleteRepo{
-		todos:    []Todo{{ID: 1, Title: "task"}},
-		onDelete: func(_ int) { deleted = true },
+	todos := []Todo{{ID: 1, Title: "task"}}
+	repo := &testRepo{
+		OnList:   func(_ Filter) ([]Todo, error) { return todos, nil },
+		OnDelete: func(_ int) error { deleted = true; return nil },
 	}
 	m := New(repo)
-	m.Tasks = repo.todos
+	m.Tasks = todos
 
 	m = sendKey(m, "d")
 	if !m.ConfirmDelete {
@@ -30,12 +31,13 @@ func TestConfirm_DSetsFlagButDoesNotDelete(t *testing.T) {
 
 func TestConfirm_YConfirmsDelete(t *testing.T) {
 	deleted := false
-	repo := &spyDeleteRepo{
-		todos:    []Todo{{ID: 5, Title: "bye"}},
-		onDelete: func(id int) { deleted = (id == 5) },
+	todos := []Todo{{ID: 5, Title: "bye"}}
+	repo := &testRepo{
+		OnList:   func(_ Filter) ([]Todo, error) { return todos, nil },
+		OnDelete: func(id int) error { deleted = (id == 5); return nil },
 	}
 	m := New(repo)
-	m.Tasks = repo.todos
+	m.Tasks = todos
 
 	m = sendKey(m, "d")
 	sendKey(m, "y")
@@ -46,12 +48,13 @@ func TestConfirm_YConfirmsDelete(t *testing.T) {
 
 func TestConfirm_NCancels(t *testing.T) {
 	deleted := false
-	repo := &spyDeleteRepo{
-		todos:    []Todo{{ID: 3, Title: "keep"}},
-		onDelete: func(_ int) { deleted = true },
+	todos := []Todo{{ID: 3, Title: "keep"}}
+	repo := &testRepo{
+		OnList:   func(_ Filter) ([]Todo, error) { return todos, nil },
+		OnDelete: func(_ int) error { deleted = true; return nil },
 	}
 	m := New(repo)
-	m.Tasks = repo.todos
+	m.Tasks = todos
 
 	m = sendKey(m, "d")
 	m = sendKey(m, "n")
@@ -65,12 +68,13 @@ func TestConfirm_NCancels(t *testing.T) {
 
 func TestConfirm_EscCancels(t *testing.T) {
 	deleted := false
-	repo := &spyDeleteRepo{
-		todos:    []Todo{{ID: 2, Title: "keep"}},
-		onDelete: func(_ int) { deleted = true },
+	todos := []Todo{{ID: 2, Title: "keep"}}
+	repo := &testRepo{
+		OnList:   func(_ Filter) ([]Todo, error) { return todos, nil },
+		OnDelete: func(_ int) error { deleted = true; return nil },
 	}
 	m := New(repo)
-	m.Tasks = repo.todos
+	m.Tasks = todos
 
 	m = sendKey(m, "d")
 	m = sendKeyType(m, tea.KeyEsc)
@@ -84,12 +88,13 @@ func TestConfirm_EscCancels(t *testing.T) {
 
 func TestConfirm_OtherKeysIgnored(t *testing.T) {
 	deleted := false
-	repo := &spyDeleteRepo{
-		todos:    []Todo{{ID: 1, Title: "t"}},
-		onDelete: func(_ int) { deleted = true },
+	todos := []Todo{{ID: 1, Title: "t"}}
+	repo := &testRepo{
+		OnList:   func(_ Filter) ([]Todo, error) { return todos, nil },
+		OnDelete: func(_ int) error { deleted = true; return nil },
 	}
 	m := New(repo)
-	m.Tasks = repo.todos
+	m.Tasks = todos
 
 	m = sendKey(m, "d")
 	m = sendKey(m, "j") // navigation key — should be swallowed
@@ -224,7 +229,7 @@ func TestArrow_IgnoredInConfirmMode(t *testing.T) {
 // ── 6.7 Due date autocomplete ─────────────────────────────────────────────────
 
 func TestAutocomplete_TFillsTodayWhenEmpty(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	m = sendKey(m, "a")
 	m = typeString(m, "My task")
 	m = sendKeyType(m, tea.KeyEnter) // advance to date step
@@ -238,7 +243,7 @@ func TestAutocomplete_TFillsTodayWhenEmpty(t *testing.T) {
 }
 
 func TestAutocomplete_TIgnoredWhenFieldNotEmpty(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	m = sendKey(m, "a")
 	m = typeString(m, "My task")
 	m = sendKeyType(m, tea.KeyEnter)
@@ -251,7 +256,7 @@ func TestAutocomplete_TIgnoredWhenFieldNotEmpty(t *testing.T) {
 }
 
 func TestAutocomplete_TIgnoredInTitleStep(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	m = sendKey(m, "a") // enter title step
 	before := m.titleInput.Value()
 	m = sendKey(m, "t")

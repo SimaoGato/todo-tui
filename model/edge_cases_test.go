@@ -80,7 +80,7 @@ func TestCursorPersistence_TabSwitchResetsCursorToZero(t *testing.T) {
 // 6.3 – terminal resize handling
 
 func TestWindowResize_StoresDimensions(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	next, cmd := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	am := next.(AppModel)
 	if am.Width != 120 || am.Height != 40 {
@@ -92,7 +92,7 @@ func TestWindowResize_StoresDimensions(t *testing.T) {
 }
 
 func TestWindowResize_UpdatedDimensionsReflected(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	next1, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	am1 := next1.(AppModel)
 	next2, _ := am1.Update(tea.WindowSizeMsg{Width: 200, Height: 50})
@@ -103,14 +103,14 @@ func TestWindowResize_UpdatedDimensionsReflected(t *testing.T) {
 }
 
 func TestTitleColWidth_DefaultWhenNoSize(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	if got := m.titleColWidth(); got != defaultTitleWidth {
 		t.Errorf("expected default %d, got %d", defaultTitleWidth, got)
 	}
 }
 
 func TestTitleColWidth_DynamicWhenWidthKnown(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	m.Width = 100
 	got := m.titleColWidth()
 	if got <= defaultTitleWidth {
@@ -119,7 +119,7 @@ func TestTitleColWidth_DynamicWhenWidthKnown(t *testing.T) {
 }
 
 func TestTitleColWidth_MinimumEnforced(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	m.Width = 10 // very small
 	got := m.titleColWidth()
 	if got < 20 {

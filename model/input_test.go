@@ -7,37 +7,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// spyCreateRepo captures Create calls for assertions.
-type spyCreateRepo struct {
-	todos        []Todo
-	createCalled bool
-	createdTitle string
-	createdDate  *time.Time
-}
-
-func (s *spyCreateRepo) List(_ Filter) ([]Todo, error)  { return s.todos, nil }
-func (s *spyCreateRepo) ToggleDone(_ int) error          { return nil }
-func (s *spyCreateRepo) Delete(_ int) error              { return nil }
-func (s *spyCreateRepo) Create(title string, dueDate *time.Time) (Todo, error) {
-	s.createCalled = true
-	s.createdTitle = title
-	s.createdDate = dueDate
-	return Todo{ID: 99, Title: title}, nil
-}
-
-// typeString sends each rune as a separate KeyRunes message.
-func typeString(m AppModel, s string) AppModel {
-	for _, r := range s {
-		next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
-		m = next.(AppModel)
-	}
-	return m
-}
-
 // 4.1 – enter add mode
 
 func TestInput_APressEntersInputMode(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	m = sendKey(m, "a")
 	if !m.InputMode {
 		t.Error("pressing 'a' should set InputMode=true")
@@ -48,7 +21,7 @@ func TestInput_APressEntersInputMode(t *testing.T) {
 }
 
 func TestInput_EscExitsInputMode(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	m = sendKey(m, "a")
 	m = sendKeyType(m, tea.KeyEsc)
 	if m.InputMode {
@@ -69,7 +42,7 @@ func TestInput_NavigationIgnoredInInputMode(t *testing.T) {
 }
 
 func TestInput_CharactersAddedToBuffer(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	m = sendKey(m, "a")
 	m = typeString(m, "hello")
 	if m.titleInput.Value() != "hello" {
@@ -80,7 +53,7 @@ func TestInput_CharactersAddedToBuffer(t *testing.T) {
 // 4.2 – due date prompt
 
 func TestInput_EmptyTitleDoesNotAdvance(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	m = sendKey(m, "a")
 	m = sendKeyType(m, tea.KeyEnter)
 	if m.inputStep != stepTitle {
@@ -89,7 +62,7 @@ func TestInput_EmptyTitleDoesNotAdvance(t *testing.T) {
 }
 
 func TestInput_TitleEnterMovesToDateStep(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	m = sendKey(m, "a")
 	m = typeString(m, "Buy milk")
 	m = sendKeyType(m, tea.KeyEnter)
@@ -102,7 +75,7 @@ func TestInput_TitleEnterMovesToDateStep(t *testing.T) {
 }
 
 func TestInput_InvalidDateShowsError(t *testing.T) {
-	m := New(&mockRepo{})
+	m := New(&testRepo{})
 	m = sendKey(m, "a")
 	m = typeString(m, "Task")
 	m = sendKeyType(m, tea.KeyEnter) // confirm title
@@ -117,7 +90,11 @@ func TestInput_InvalidDateShowsError(t *testing.T) {
 }
 
 func TestInput_EscDuringDateStepCancels(t *testing.T) {
-	repo := &spyCreateRepo{}
+	createCalled := false
+	repo := &testRepo{OnCreate: func(title string, d *time.Time) (Todo, error) {
+		createCalled = true
+		return Todo{ID: 99, Title: title}, nil
+	}}
 	m := New(repo)
 	m = sendKey(m, "a")
 	m = typeString(m, "Task")
@@ -126,7 +103,7 @@ func TestInput_EscDuringDateStepCancels(t *testing.T) {
 	if m.InputMode {
 		t.Error("Esc should exit input mode from date step")
 	}
-	if repo.createCalled {
+	if createCalled {
 		t.Error("Create should not be called after Esc")
 	}
 }
@@ -134,19 +111,27 @@ func TestInput_EscDuringDateStepCancels(t *testing.T) {
 // 4.3 – save and return to list
 
 func TestInput_EmptyDateCreatesTaskWithNoDueDate(t *testing.T) {
-	repo := &spyCreateRepo{}
+	var createCalled bool
+	var createdTitle string
+	var createdDate *time.Time
+	repo := &testRepo{OnCreate: func(title string, d *time.Time) (Todo, error) {
+		createCalled = true
+		createdTitle = title
+		createdDate = d
+		return Todo{ID: 99, Title: title}, nil
+	}}
 	m := New(repo)
 	m = sendKey(m, "a")
 	m = typeString(m, "Buy milk")
 	m = sendKeyType(m, tea.KeyEnter) // confirm title
 	m = sendKeyType(m, tea.KeyEnter) // skip date
-	if !repo.createCalled {
+	if !createCalled {
 		t.Fatal("Create should have been called")
 	}
-	if repo.createdTitle != "Buy milk" {
-		t.Errorf("createdTitle: got %q, want %q", repo.createdTitle, "Buy milk")
+	if createdTitle != "Buy milk" {
+		t.Errorf("createdTitle: got %q, want %q", createdTitle, "Buy milk")
 	}
-	if repo.createdDate != nil {
+	if createdDate != nil {
 		t.Error("expected nil due date when date skipped")
 	}
 	if m.InputMode {
@@ -155,20 +140,26 @@ func TestInput_EmptyDateCreatesTaskWithNoDueDate(t *testing.T) {
 }
 
 func TestInput_ValidDateCreatesTaskWithDueDate(t *testing.T) {
-	repo := &spyCreateRepo{}
+	var createCalled bool
+	var createdDate *time.Time
+	repo := &testRepo{OnCreate: func(title string, d *time.Time) (Todo, error) {
+		createCalled = true
+		createdDate = d
+		return Todo{ID: 99, Title: title}, nil
+	}}
 	m := New(repo)
 	m = sendKey(m, "a")
 	m = typeString(m, "Task")
 	m = sendKeyType(m, tea.KeyEnter) // confirm title
 	m = typeString(m, "2026-12-25")
 	m = sendKeyType(m, tea.KeyEnter) // confirm date
-	if !repo.createCalled {
+	if !createCalled {
 		t.Fatal("Create should have been called")
 	}
-	if repo.createdDate == nil {
+	if createdDate == nil {
 		t.Fatal("expected non-nil due date")
 	}
-	if got := repo.createdDate.Format("2006-01-02"); got != "2026-12-25" {
+	if got := createdDate.Format("2006-01-02"); got != "2026-12-25" {
 		t.Errorf("createdDate: got %q, want %q", got, "2026-12-25")
 	}
 	if m.InputMode {
@@ -177,7 +168,9 @@ func TestInput_ValidDateCreatesTaskWithDueDate(t *testing.T) {
 }
 
 func TestInput_SaveExitsAndReloads(t *testing.T) {
-	repo := &spyCreateRepo{}
+	repo := &testRepo{OnCreate: func(title string, d *time.Time) (Todo, error) {
+		return Todo{ID: 99, Title: title}, nil
+	}}
 	m := New(repo)
 	m = sendKey(m, "a")
 	m = typeString(m, "Task")

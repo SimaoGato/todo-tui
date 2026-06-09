@@ -2,33 +2,9 @@ package model
 
 import (
 	"testing"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
-
-// helpers
-
-func modelWithTasks(n int) AppModel {
-	todos := make([]Todo, n)
-	for i := range todos {
-		todos[i] = Todo{ID: i + 1, Title: "task"}
-	}
-	repo := &mockRepo{todos: todos}
-	m := New(repo)
-	m.Tasks = todos
-	return m
-}
-
-func sendKey(m AppModel, key string) AppModel {
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(key)})
-	return next.(AppModel)
-}
-
-func sendKeyType(m AppModel, t tea.KeyType) AppModel {
-	next, _ := m.Update(tea.KeyMsg{Type: t})
-	return next.(AppModel)
-}
 
 // 3.2 – navigation
 
@@ -130,7 +106,10 @@ func TestTab_SwitchResetsCursor(t *testing.T) {
 func TestToggle_SpaceCallsToggleDone(t *testing.T) {
 	todos := []Todo{{ID: 42, Title: "toggle me"}}
 	toggled := false
-	repo := &spyToggleRepo{todos: todos, onToggle: func(id int) { toggled = (id == 42) }}
+	repo := &testRepo{
+		OnList:       func(_ Filter) ([]Todo, error) { return todos, nil },
+		OnToggleDone: func(id int) error { toggled = (id == 42); return nil },
+	}
 	m := New(repo)
 	m.Tasks = todos
 
@@ -151,7 +130,10 @@ func TestToggle_EmptyListNoOp(t *testing.T) {
 func TestDelete_DCallsDelete(t *testing.T) {
 	todos := []Todo{{ID: 7, Title: "delete me"}}
 	deleted := false
-	repo := &spyDeleteRepo{todos: todos, onDelete: func(id int) { deleted = (id == 7) }}
+	repo := &testRepo{
+		OnList:   func(_ Filter) ([]Todo, error) { return todos, nil },
+		OnDelete: func(id int) error { deleted = (id == 7); return nil },
+	}
 	m := New(repo)
 	m.Tasks = todos
 
@@ -197,25 +179,3 @@ func TestQuit_QIgnoredInInputMode(t *testing.T) {
 		t.Error("q should be ignored in input mode")
 	}
 }
-
-// spy repos
-
-type spyToggleRepo struct {
-	todos    []Todo
-	onToggle func(int)
-}
-
-func (s *spyToggleRepo) List(_ Filter) ([]Todo, error)                    { return s.todos, nil }
-func (s *spyToggleRepo) Create(_ string, _ *time.Time) (Todo, error)      { return Todo{}, nil }
-func (s *spyToggleRepo) ToggleDone(id int) error                          { s.onToggle(id); return nil }
-func (s *spyToggleRepo) Delete(_ int) error                               { return nil }
-
-type spyDeleteRepo struct {
-	todos    []Todo
-	onDelete func(int)
-}
-
-func (s *spyDeleteRepo) List(_ Filter) ([]Todo, error)                    { return s.todos, nil }
-func (s *spyDeleteRepo) Create(_ string, _ *time.Time) (Todo, error)      { return Todo{}, nil }
-func (s *spyDeleteRepo) ToggleDone(_ int) error                           { return nil }
-func (s *spyDeleteRepo) Delete(id int) error                              { s.onDelete(id); return nil }
