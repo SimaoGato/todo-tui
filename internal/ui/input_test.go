@@ -17,8 +17,8 @@ func TestInput_APressEntersInputMode(t *testing.T) {
 	if !m.InputMode {
 		t.Error("pressing 'a' should set InputMode=true")
 	}
-	if m.inputStep != stepTitle {
-		t.Errorf("expected inputStep=stepTitle, got %d", m.inputStep)
+	if m.taskInput.step != stepTitle {
+		t.Errorf("expected taskInput.step=stepTitle, got %d", m.taskInput.step)
 	}
 }
 
@@ -29,8 +29,8 @@ func TestInput_EscExitsInputMode(t *testing.T) {
 	if m.InputMode {
 		t.Error("Esc should exit input mode")
 	}
-	if m.inputStep != stepNone {
-		t.Errorf("expected inputStep=stepNone after Esc, got %d", m.inputStep)
+	if m.taskInput.step != stepNone {
+		t.Errorf("expected taskInput.step=stepNone after Esc, got %d", m.taskInput.step)
 	}
 }
 
@@ -47,8 +47,8 @@ func TestInput_CharactersAddedToBuffer(t *testing.T) {
 	m := New(&testRepo{})
 	m = sendKey(m, "a")
 	m = typeString(m, "hello")
-	if m.titleInput.Value() != "hello" {
-		t.Errorf("title buffer: got %q, want %q", m.titleInput.Value(), "hello")
+	if m.taskInput.titleInput.Value() != "hello" {
+		t.Errorf("title buffer: got %q, want %q", m.taskInput.titleInput.Value(), "hello")
 	}
 }
 
@@ -58,7 +58,7 @@ func TestInput_EmptyTitleDoesNotAdvance(t *testing.T) {
 	m := New(&testRepo{})
 	m = sendKey(m, "a")
 	m = sendKeyType(m, tea.KeyEnter)
-	if m.inputStep != stepTitle {
+	if m.taskInput.step != stepTitle {
 		t.Error("empty title should not advance to date step")
 	}
 }
@@ -68,11 +68,11 @@ func TestInput_TitleEnterMovesToDateStep(t *testing.T) {
 	m = sendKey(m, "a")
 	m = typeString(m, "Buy milk")
 	m = sendKeyType(m, tea.KeyEnter)
-	if m.inputStep != stepDate {
-		t.Errorf("after title Enter, expected stepDate, got %d", m.inputStep)
+	if m.taskInput.step != stepDate {
+		t.Errorf("after title Enter, expected stepDate, got %d", m.taskInput.step)
 	}
-	if m.pendingTitle != "Buy milk" {
-		t.Errorf("pendingTitle: got %q, want %q", m.pendingTitle, "Buy milk")
+	if m.taskInput.pending != "Buy milk" {
+		t.Errorf("taskInput.pending: got %q, want %q", m.taskInput.pending, "Buy milk")
 	}
 }
 
@@ -83,8 +83,8 @@ func TestInput_InvalidDateShowsError(t *testing.T) {
 	m = sendKeyType(m, tea.KeyEnter) // confirm title
 	m = typeString(m, "not-a-date")
 	m = sendKeyType(m, tea.KeyEnter) // invalid date
-	if m.inputErr == "" {
-		t.Error("expected inputErr to be set for invalid date")
+	if m.taskInput.err == "" {
+		t.Error("expected taskInput.err to be set for invalid date")
 	}
 	if !m.InputMode {
 		t.Error("should remain in input mode after invalid date")

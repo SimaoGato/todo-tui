@@ -1,10 +1,8 @@
 package ui
 
 import (
-	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/justasandbox/my-todo-cli/internal/todo"
@@ -26,14 +24,6 @@ const (
 	TabAll
 	TabCompleted
 	tabCount
-)
-
-type inputStep int
-
-const (
-	stepNone  inputStep = iota
-	stepTitle
-	stepDate
 )
 
 // todosLoadedMsg carries the result of an async List() call.
@@ -67,16 +57,12 @@ type AppModel struct {
 	Offset        int
 	ActiveTab     Tab
 	InputMode     bool
-	inputStep     inputStep
-	titleInput    textinput.Model
-	dateInput     textinput.Model
-	pendingTitle  string
-	inputErr      string
+	taskInput     TaskInput
+	confirmDialog ConfirmDialog
 	errorMsg      string
 	Repo          Repo
 	Width         int
 	Height        int
-	ConfirmDelete bool
 	SessCompleted int
 	SessDeleted   int
 }
@@ -96,19 +82,10 @@ func (m AppModel) GetSummary() Summary {
 }
 
 func New(repo Repo) AppModel {
-	ti := textinput.New()
-	ti.Placeholder = "Task title…"
-	ti.CharLimit = 256
-
-	di := textinput.New()
-	di.Placeholder = "YYYY-MM-DD"
-	di.CharLimit = 10
-
 	return AppModel{
-		ActiveTab:  TabToday,
-		Repo:       repo,
-		titleInput: ti,
-		dateInput:  di,
+		ActiveTab: TabToday,
+		Repo:      repo,
+		taskInput: newTaskInput(),
 	}
 }
 
@@ -214,13 +191,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case createDoneMsg:
 		if msg.err != nil {
-			m.inputErr = "create failed: " + msg.err.Error()
+			m.taskInput.err = "create failed: " + msg.err.Error()
 			return m, nil
 		}
 		m.InputMode = false
-		m.inputStep = stepNone
-		m.inputErr = ""
-		m.pendingTitle = ""
+		m.taskInput.Active = false
+		m.taskInput.step = stepNone
+		m.taskInput.err = ""
+		m.taskInput.pending = ""
 		return m, m.loadTodos()
 
 	case tea.WindowSizeMsg:
@@ -236,7 +214,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.InputMode {
 			return m.updateInputMode(msg)
 		}
-		if m.ConfirmDelete {
+		if m.confirmDialog.Active {
 			return m.updateConfirmDelete(msg)
 		}
 		return m.updateNormalMode(msg)
@@ -246,67 +224,24 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m AppModel) updateInputMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyEsc:
+	updated, cmd, signal, result := m.taskInput.Update(msg)
+	m.taskInput = updated
+	switch signal {
+	case taskInputSignalCancel:
 		m.InputMode = false
-		m.inputStep = stepNone
-		m.inputErr = ""
-		m.pendingTitle = ""
 		return m, nil
-
-	case tea.KeyEnter:
-		if m.inputStep == stepTitle {
-			title := strings.TrimSpace(m.titleInput.Value())
-			if title == "" {
-				return m, nil
-			}
-			m.pendingTitle = title
-			m.inputStep = stepDate
-			m.dateInput.Reset()
-			m.titleInput.Blur()
-			focusCmd := m.dateInput.Focus()
-			return m, focusCmd
-		}
-		// stepDate: validate and dispatch async create
-		dateStr := strings.TrimSpace(m.dateInput.Value())
-		var dueDate *time.Time
-		if dateStr != "" {
-			t, err := time.Parse("2006-01-02", dateStr)
-			if err != nil {
-				m.inputErr = "invalid date, use YYYY-MM-DD"
-				return m, nil
-			}
-			dueDate = &t
-		}
-		return m, cmdCreate(m.Repo, m.pendingTitle, dueDate)
-	}
-
-	// 6.7 – 't' fills today's date when the date field is empty
-	if m.inputStep == stepDate && msg.Type == tea.KeyRunes &&
-		string(msg.Runes) == "t" && m.dateInput.Value() == "" {
-		m.dateInput.SetValue(time.Now().Format("2006-01-02"))
-		m.dateInput.CursorEnd()
-		return m, nil
-	}
-
-	// Delegate remaining keys to the active input field.
-	var cmd tea.Cmd
-	if m.inputStep == stepTitle {
-		m.titleInput, cmd = m.titleInput.Update(msg)
-	} else {
-		m.dateInput, cmd = m.dateInput.Update(msg)
+	case taskInputSignalSubmit:
+		return m, cmdCreate(m.Repo, result.Title, result.DueDate)
 	}
 	return m, cmd
 }
 
 func (m AppModel) updateConfirmDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch {
-	case msg.String() == "y":
+	updated, signal := m.confirmDialog.Update(msg)
+	m.confirmDialog = updated
+	if signal == confirmSignalYes && len(m.Tasks) > 0 {
 		id := m.Tasks[m.Cursor].ID
-		m.ConfirmDelete = false
 		return m, cmdDelete(m.Repo, id)
-	case msg.String() == "n", msg.Type == tea.KeyEsc:
-		m.ConfirmDelete = false
 	}
 	return m, nil
 }
@@ -319,10 +254,8 @@ func (m AppModel) updateNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "a":
 		m.InputMode = true
-		m.inputStep = stepTitle
-		m.inputErr = ""
-		m.titleInput.Reset()
-		focusCmd := m.titleInput.Focus()
+		var focusCmd tea.Cmd
+		m.taskInput, focusCmd = m.taskInput.activate()
 		return m, focusCmd
 
 	case "q":
@@ -371,7 +304,8 @@ func (m AppModel) updateNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "d":
 		if len(m.Tasks) > 0 {
-			m.ConfirmDelete = true
+			m.confirmDialog.Active = true
+			m.confirmDialog.prompt = m.Tasks[m.Cursor].Title
 		}
 
 	case "up":

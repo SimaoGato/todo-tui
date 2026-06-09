@@ -172,22 +172,7 @@ func (m AppModel) titleColWidth() int {
 // View renders the full TUI screen.
 func (m AppModel) View() string {
 	if m.InputMode {
-		var sb strings.Builder
-		if m.inputStep == stepTitle {
-			sb.WriteString("New task: ")
-			sb.WriteString(m.titleInput.View())
-		} else {
-			sb.WriteString("Due date (YYYY-MM-DD, Enter to skip): ")
-			sb.WriteString(m.dateInput.View())
-			if m.inputErr != "" {
-				sb.WriteString("\n")
-				sb.WriteString(styleError.Render(m.inputErr))
-			}
-		}
-		sb.WriteString("\n\n")
-		sb.WriteString(renderHelpBar(true))
-		sb.WriteString("\n")
-		return sb.String()
+		return m.taskInput.View()
 	}
 
 	tw := m.titleColWidth()
@@ -208,8 +193,8 @@ func (m AppModel) View() string {
 	}
 
 	sb.WriteString("\n")
-	if m.ConfirmDelete && len(m.Tasks) > 0 {
-		sb.WriteString(renderConfirmBar(m.Tasks[m.Cursor].Title))
+	if m.confirmDialog.Active {
+		sb.WriteString(m.confirmDialog.View())
 	} else if m.errorMsg != "" {
 		sb.WriteString(styleError.Render(m.errorMsg))
 	} else {

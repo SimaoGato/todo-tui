@@ -23,8 +23,8 @@ func TestConfirm_DSetsFlagButDoesNotDelete(t *testing.T) {
 	m.Tasks = todos
 
 	m = sendKey(m, "d")
-	if !m.ConfirmDelete {
-		t.Error("d should set ConfirmDelete=true")
+	if !m.confirmDialog.Active {
+		t.Error("d should set confirmDialog.Active=true")
 	}
 	if deleted {
 		t.Error("d should not delete immediately")
@@ -67,8 +67,8 @@ func TestConfirm_NCancels(t *testing.T) {
 	if deleted {
 		t.Error("n should cancel without deleting")
 	}
-	if m.ConfirmDelete {
-		t.Error("n should clear ConfirmDelete flag")
+	if m.confirmDialog.Active {
+		t.Error("n should clear confirmDialog.Active")
 	}
 }
 
@@ -87,8 +87,8 @@ func TestConfirm_EscCancels(t *testing.T) {
 	if deleted {
 		t.Error("esc should cancel without deleting")
 	}
-	if m.ConfirmDelete {
-		t.Error("esc should clear ConfirmDelete flag")
+	if m.confirmDialog.Active {
+		t.Error("esc should clear confirmDialog.Active")
 	}
 }
 
@@ -108,16 +108,16 @@ func TestConfirm_OtherKeysIgnored(t *testing.T) {
 	if deleted {
 		t.Error("irrelevant keys should not trigger delete")
 	}
-	if !m.ConfirmDelete {
-		t.Error("ConfirmDelete should still be set after irrelevant keys")
+	if !m.confirmDialog.Active {
+		t.Error("confirmDialog.Active should still be set after irrelevant keys")
 	}
 }
 
 func TestConfirm_EmptyListNoOp(t *testing.T) {
 	m := modelWithTasks(0)
 	m = sendKey(m, "d")
-	if m.ConfirmDelete {
-		t.Error("d on empty list should not set ConfirmDelete")
+	if m.confirmDialog.Active {
+		t.Error("d on empty list should not set confirmDialog.Active")
 	}
 }
 
@@ -225,7 +225,7 @@ func TestArrow_IgnoredInInputMode(t *testing.T) {
 
 func TestArrow_IgnoredInConfirmMode(t *testing.T) {
 	m := modelWithTasks(3)
-	m.ConfirmDelete = true
+	m.confirmDialog.Active = true
 	m = sendKeyType(m, tea.KeyDown)
 	if m.Cursor != 0 {
 		t.Error("↓ should be ignored in confirm mode")
@@ -241,7 +241,7 @@ func TestAutocomplete_TFillsTodayWhenEmpty(t *testing.T) {
 	m = sendKeyType(m, tea.KeyEnter) // advance to date step
 
 	m = sendKey(m, "t") // autocomplete
-	got := m.dateInput.Value()
+	got := m.taskInput.dateInput.Value()
 	want := time.Now().Format("2006-01-02")
 	if got != want {
 		t.Errorf("autocomplete: got %q, want %q", got, want)
@@ -256,7 +256,7 @@ func TestAutocomplete_TIgnoredWhenFieldNotEmpty(t *testing.T) {
 
 	m = typeString(m, "2026") // field has content
 	m = sendKey(m, "t")       // t should be appended as text, not autocomplete
-	if m.dateInput.Value() == time.Now().Format("2006-01-02") {
+	if m.taskInput.dateInput.Value() == time.Now().Format("2006-01-02") {
 		t.Error("t should not autocomplete when field already has text")
 	}
 }
@@ -264,9 +264,9 @@ func TestAutocomplete_TIgnoredWhenFieldNotEmpty(t *testing.T) {
 func TestAutocomplete_TIgnoredInTitleStep(t *testing.T) {
 	m := New(&testRepo{})
 	m = sendKey(m, "a") // enter title step
-	before := m.titleInput.Value()
+	before := m.taskInput.titleInput.Value()
 	m = sendKey(m, "t")
-	after := m.titleInput.Value()
+	after := m.taskInput.titleInput.Value()
 	if after == time.Now().Format("2006-01-02") {
 		t.Error("t autocomplete should not fire in title step")
 	}

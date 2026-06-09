@@ -80,7 +80,7 @@ func TestAsyncDelete_YDoesNotCallRepoSynchronously(t *testing.T) {
 	repo := &testRepo{OnDelete: func(_ int) error { called = true; return nil }}
 	m := New(repo)
 	m.Tasks = todos
-	m.ConfirmDelete = true
+	m.confirmDialog.Active = true
 
 	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")})
 	if called {
@@ -135,8 +135,8 @@ func TestAsyncCreate_EnterOnDateStepDoesNotCallRepoSynchronously(t *testing.T) {
 	}
 	m := New(repo)
 	m.InputMode = true
-	m.inputStep = stepDate
-	m.pendingTitle = "My Task"
+	m.taskInput.step = stepDate
+	m.taskInput.pending = "My Task"
 
 	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if called {
@@ -156,16 +156,16 @@ func TestAsyncCreate_EnterOnDateStepDoesNotCallRepoSynchronously(t *testing.T) {
 func TestAsyncCreate_SuccessMsgExitsInputMode(t *testing.T) {
 	m := New(&testRepo{OnList: func(_ todo.Filter) ([]todo.Task, error) { return nil, nil }})
 	m.InputMode = true
-	m.inputStep = stepDate
-	m.pendingTitle = "Task"
+	m.taskInput.step = stepDate
+	m.taskInput.pending = "Task"
 
 	next, cmd := m.Update(createDoneMsg{err: nil})
 	m = next.(AppModel)
 	if m.InputMode {
 		t.Error("InputMode should be false after successful create")
 	}
-	if m.pendingTitle != "" {
-		t.Errorf("pendingTitle should be cleared, got %q", m.pendingTitle)
+	if m.taskInput.pending != "" {
+		t.Errorf("taskInput.pending should be cleared, got %q", m.taskInput.pending)
 	}
 	if cmd == nil {
 		t.Error("success should return loadTodos cmd")
@@ -177,19 +177,19 @@ func TestAsyncCreate_SuccessMsgExitsInputMode(t *testing.T) {
 func TestAsyncCreate_ErrorMsgKeepsInputModeWithTextPreserved(t *testing.T) {
 	m := New(&testRepo{})
 	m.InputMode = true
-	m.inputStep = stepDate
-	m.pendingTitle = "My Task"
+	m.taskInput.step = stepDate
+	m.taskInput.pending = "My Task"
 
 	next, cmd := m.Update(createDoneMsg{err: errors.New("db error")})
 	m = next.(AppModel)
 	if !m.InputMode {
 		t.Error("InputMode should remain true on create failure")
 	}
-	if m.pendingTitle != "My Task" {
-		t.Errorf("pendingTitle should be preserved, got %q", m.pendingTitle)
+	if m.taskInput.pending != "My Task" {
+		t.Errorf("taskInput.pending should be preserved, got %q", m.taskInput.pending)
 	}
-	if m.inputErr == "" {
-		t.Error("inputErr should be set on create failure")
+	if m.taskInput.err == "" {
+		t.Error("taskInput.err should be set on create failure")
 	}
 	if cmd != nil {
 		t.Error("failed create should not trigger a reload")
