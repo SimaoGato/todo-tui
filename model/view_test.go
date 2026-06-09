@@ -220,3 +220,42 @@ func TestView_InputMode_DatePrompt(t *testing.T) {
 		t.Error("date step should show due date prompt")
 	}
 }
+
+// Timezone-aware date classification (TT-78)
+
+func TestTaskDateClass_DueTodayInNegativeOffsetZone(t *testing.T) {
+	loc := time.FixedZone("UTC-4", -4*60*60)
+	// 10pm June 9 in UTC-4 = 2am June 10 UTC — "today" is still June 9 locally.
+	now := time.Date(2026, 6, 9, 22, 0, 0, 0, loc)
+	// Midnight June 9 in UTC-4 = 4am June 9 UTC.
+	// With Truncate(24h): UTC June 9 < UTC June 10 → "overdue" (bug).
+	// With Year/Month/Day: both June 9 locally → "today" (correct).
+	due := time.Date(2026, 6, 9, 0, 0, 0, 0, loc)
+	if got := taskDateClass(&due, now); got != "today" {
+		t.Errorf("taskDateClass = %q, want %q", got, "today")
+	}
+}
+
+func TestTaskDateClass_OverdueInNegativeOffsetZone(t *testing.T) {
+	loc := time.FixedZone("UTC-4", -4*60*60)
+	now := time.Date(2026, 6, 9, 12, 0, 0, 0, loc)
+	due := time.Date(2026, 6, 8, 0, 0, 0, 0, loc)
+	if got := taskDateClass(&due, now); got != "overdue" {
+		t.Errorf("taskDateClass = %q, want %q", got, "overdue")
+	}
+}
+
+func TestTaskDateClass_FutureNotClassified(t *testing.T) {
+	loc := time.FixedZone("UTC-4", -4*60*60)
+	now := time.Date(2026, 6, 9, 12, 0, 0, 0, loc)
+	due := time.Date(2026, 6, 10, 0, 0, 0, 0, loc)
+	if got := taskDateClass(&due, now); got != "" {
+		t.Errorf("taskDateClass = %q, want %q", got, "")
+	}
+}
+
+func TestTaskDateClass_NilDueDate(t *testing.T) {
+	if got := taskDateClass(nil, time.Now()); got != "" {
+		t.Errorf("taskDateClass(nil) = %q, want %q", got, "")
+	}
+}

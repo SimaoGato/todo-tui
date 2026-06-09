@@ -62,16 +62,19 @@ func (r *Repository) List(filter todo.Filter) ([]todo.Todo, error) {
 		if dueDateStr != nil {
 			var d time.Time
 			var parseErr error
-			for _, layout := range []string{"2006-01-02", time.RFC3339, "2006-01-02T15:04:05Z07:00"} {
-				d, parseErr = time.Parse(layout, *dueDateStr)
-				if parseErr == nil {
-					break
+			// Date-only strings are local calendar dates; parse them in local timezone.
+			d, parseErr = time.ParseInLocation("2006-01-02", *dueDateStr, time.Now().Location())
+			if parseErr != nil {
+				for _, layout := range []string{time.RFC3339, "2006-01-02T15:04:05Z07:00"} {
+					d, parseErr = time.Parse(layout, *dueDateStr)
+					if parseErr == nil {
+						break
+					}
 				}
 			}
 			if parseErr != nil {
 				return nil, fmt.Errorf("parse due_date: %w", parseErr)
 			}
-			d = d.Truncate(24 * time.Hour)
 			t.DueDate = &d
 		}
 		var tsErr error
@@ -127,7 +130,7 @@ func (r *Repository) Create(title string, dueDate *time.Time) (todo.Todo, error)
 
 	var dueDateStr *string
 	if dueDate != nil {
-		s := dueDate.UTC().Format("2006-01-02")
+		s := dueDate.Format("2006-01-02")
 		dueDateStr = &s
 	}
 

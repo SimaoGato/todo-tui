@@ -55,6 +55,24 @@ func renderTabBar(active Tab) string {
 	return strings.Join(parts, "  ")
 }
 
+// taskDateClass returns "overdue", "today", or "" by comparing calendar dates in their
+// own timezones. Using Year/Month/Day avoids the UTC-aligned Truncate(24h) bug that
+// misclassifies tasks in negative-UTC-offset zones near midnight.
+func taskDateClass(dueDate *time.Time, now time.Time) string {
+	if dueDate == nil {
+		return ""
+	}
+	dY, dM, dD := dueDate.Date()
+	nY, nM, nD := now.Date()
+	if dY == nY && dM == nM && dD == nD {
+		return "today"
+	}
+	if dY < nY || (dY == nY && (dM < nM || (dM == nM && dD < nD))) {
+		return "overdue"
+	}
+	return ""
+}
+
 // 5.2 + 5.3 – task row with color coding
 
 func renderTaskRow(task todo.Todo, isCursor bool, now time.Time, titleWidth int) string {
@@ -76,15 +94,11 @@ func renderTaskRow(task todo.Todo, isCursor bool, now time.Time, titleWidth int)
 	if task.Done {
 		return styleDone.Render(line)
 	}
-	if task.DueDate != nil {
-		due := task.DueDate.In(now.Location()).Truncate(24 * time.Hour)
-		today := now.Truncate(24 * time.Hour)
-		if due.Before(today) {
-			return styleOverdue.Render(line)
-		}
-		if due.Equal(today) {
-			return styleDueToday.Render(line)
-		}
+	switch taskDateClass(task.DueDate, now) {
+	case "overdue":
+		return styleOverdue.Render(line)
+	case "today":
+		return styleDueToday.Render(line)
 	}
 	if isCursor {
 		return styleBold.Render(line)
