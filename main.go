@@ -9,6 +9,7 @@ import (
 
 	"github.com/justasandbox/my-todo-cli/db"
 	"github.com/justasandbox/my-todo-cli/model"
+	"github.com/justasandbox/my-todo-cli/todo"
 )
 
 func dbPath() string {
@@ -37,8 +38,28 @@ func main() {
 	m := model.New(repo)
 
 	p := tea.NewProgram(m, tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
+	finalModel, err := p.Run()
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
+
+	am := finalModel.(model.AppModel)
+	summary := am.GetSummary()
+
+	todayTasks, _ := repo.List(todo.FilterToday)
+	summary.TodayRemaining = len(todayTasks)
+
+	printSummary(summary)
+}
+
+func printSummary(s model.Summary) {
+	if s.Completed == 0 && s.Deleted == 0 && s.TodayRemaining == 0 {
+		fmt.Println("Nothing to report.")
+		return
+	}
+	fmt.Println("Session summary:")
+	fmt.Printf("  Completed today : %d\n", s.Completed)
+	fmt.Printf("  Deleted         : %d\n", s.Deleted)
+	fmt.Printf("  Still due today : %d\n", s.TodayRemaining)
 }

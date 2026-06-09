@@ -58,6 +58,22 @@ type AppModel struct {
 	Width         int
 	Height        int
 	ConfirmDelete bool
+	SessCompleted int
+	SessDeleted   int
+}
+
+// Summary holds per-session counters exposed to main.go after the program exits.
+type Summary struct {
+	Completed      int
+	Deleted        int
+	TodayRemaining int
+}
+
+func (m AppModel) GetSummary() Summary {
+	return Summary{
+		Completed: m.SessCompleted,
+		Deleted:   m.SessDeleted,
+	}
 }
 
 func New(repo Repo) AppModel {
@@ -206,6 +222,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.ConfirmDelete = false
 					return m, nil
 				}
+				m.SessDeleted++
 				m.ConfirmDelete = false
 				return m, m.loadTodos()
 			case msg.String() == "n", msg.Type == tea.KeyEsc:
@@ -267,9 +284,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// 3.4 – toggle completion
 		case " ":
 			if len(m.Tasks) > 0 {
+				wasIncomplete := !m.Tasks[m.Cursor].Done
 				if err := m.Repo.ToggleDone(m.Tasks[m.Cursor].ID); err != nil {
 					m.errorMsg = "toggle failed: " + err.Error()
 					return m, nil
+				}
+				if wasIncomplete {
+					m.SessCompleted++
 				}
 				return m, m.loadTodos()
 			}
